@@ -9,6 +9,9 @@ A few useful links:
 * [IRC][irc]
 * [Community Forums][forums]
 
+## Changes from the [Official Repo][official]
+This fork is for people who like to customize their OpenComputers even more. It allows to disable the sandbox partially or even completely, allowing to access the servers file system and to load native lua modules. This in turn can be used to access advanced libraries. Yet it adds security issues. I highly recommend only using this fork if you know what you are doing
+
 ###Experimental Builds
 You can find experimental builds [on the build server][jenkins]. Expect these to be generally more unstable than builds marked as releases. Use these **at your own risk**, but - when using the latest one - please *do* report bugs you encounter using them. Thanks!
 
