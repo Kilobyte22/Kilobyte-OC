@@ -123,18 +123,23 @@ class Hologram(var tier: Int) extends traits.Environment with SidedEnvironment w
     null
   }
 
-  @Callback(direct = true, limit = 128, doc = """function(x:number, z:number, height:number, value:number or boolean) -- Fills a column to the specified height.""")
+  @Callback(direct = true, limit = 128, doc = """function(x:number, z:number[, minY:number], maxY:number, value:number or boolean) -- Fills an interval of a column with the specified value.""")
   def fill(computer: Context, args: Arguments): Array[AnyRef] = this.synchronized {
     val (x, _, z) = checkCoordinates(args, 0, -1, 1)
-    val height = math.min(32, math.max(0, args.checkInteger(2)))
-    val value = checkColor(args, 3)
+    val (minY, maxY, value) =
+      if (args.count > 4)
+        (math.min(32, math.max(1, args.checkInteger(2))), math.min(32, math.max(1, args.checkInteger(3))), checkColor(args, 4))
+      else
+        (1, math.min(32, math.max(1, args.checkInteger(2))), checkColor(args, 3))
+    if (minY > maxY) throw new IllegalArgumentException("interval is empty")
 
+    val mask = (0xFFFFFFFF >>> (31 - (maxY - minY))) << (minY - 1)
     val lbit = value & 1
     val hbit = (value >>> 1) & 1
-    if (lbit == 0 || height == 0) volume(x + z * width) = 0
-    else volume(x + z * width) = 0xFFFFFFFF >>> (32 - height)
-    if (hbit == 0 || height == 0) volume(x + z * width + width * width) = 0
-    else volume(x + z * width + width * width) = 0xFFFFFFFF >>> (32 - height)
+    if (lbit == 0 || height == 0) volume(x + z * width) &= ~mask
+    else volume(x + z * width) |= mask
+    if (hbit == 0 || height == 0) volume(x + z * width + width * width) &= ~mask
+    else volume(x + z * width + width * width) |= mask
 
     setDirty(x, z)
     null
@@ -200,7 +205,7 @@ class Hologram(var tier: Int) extends traits.Environment with SidedEnvironment w
 
   @Callback(doc = """function(value:number) -- Set the render scale. A larger scale consumes more energy.""")
   def setScale(computer: Context, args: Arguments): Array[AnyRef] = {
-    scale = math.max(0.333333, math.min(Settings.hologramMaxScaleByTier(tier), args.checkDouble(0)))
+    scale = math.max(0.333333, math.min(Settings.get.hologramMaxScaleByTier(tier), args.checkDouble(0)))
     ServerPacketSender.sendHologramScale(this)
     null
   }
@@ -227,7 +232,7 @@ class Hologram(var tier: Int) extends traits.Environment with SidedEnvironment w
     // Change byte order here to allow passing stored color to OpenGL "as-is"
     // (as whole Int, i.e. 0xAABBGGRR, alpha is unused but present for alignment)
     colors(index - 1) = convertColor(value)
-    ServerPacketSender.sendHologramColor(this, index - 1, value)
+    ServerPacketSender.sendHologramColor(this, index - 1, colors(index - 1))
     result(oldValue)
   }
 
@@ -292,9 +297,9 @@ class Hologram(var tier: Int) extends traits.Environment with SidedEnvironment w
 
   override def shouldRenderInPass(pass: Int) = pass == 1
 
-  override def getMaxRenderDistanceSquared = scale / Settings.hologramMaxScaleByTier.max * Settings.get.hologramRenderDistance * Settings.get.hologramRenderDistance
+  override def getMaxRenderDistanceSquared = scale / Settings.get.hologramMaxScaleByTier.max * Settings.get.hologramRenderDistance * Settings.get.hologramRenderDistance
 
-  def getFadeStartDistanceSquared = scale / Settings.hologramMaxScaleByTier.max * Settings.get.hologramFadeStartDistance * Settings.get.hologramFadeStartDistance
+  def getFadeStartDistanceSquared = scale / Settings.get.hologramMaxScaleByTier.max * Settings.get.hologramFadeStartDistance * Settings.get.hologramFadeStartDistance
 
   override def getRenderBoundingBox = AxisAlignedBB.getAABBPool.getAABB(xCoord + 0.5 - 1.5 * scale, yCoord, zCoord - scale, xCoord + 0.5 + 1.5 * scale, yCoord + 0.25 + 2 * scale, zCoord + 0.5 + 1.5 * scale)
 

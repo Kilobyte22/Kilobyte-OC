@@ -54,7 +54,7 @@ private[oc] object Registry extends api.detail.DriverAPI {
 
   def driverFor(world: World, x: Int, y: Int, z: Int) =
     blocks.filter(_.worksWith(world, x, y, z)) match {
-      case drivers if !drivers.isEmpty => new CompoundBlockDriver(drivers: _*)
+      case drivers if drivers.nonEmpty => new CompoundBlockDriver(drivers: _*)
       case _ => null
     }
 
@@ -102,6 +102,7 @@ private[oc] object Registry extends api.detail.DriverAPI {
       case arg: Array[_] => convertList(arg, arg.zipWithIndex.iterator, memo)
       case arg: Product => convertList(arg, arg.productIterator.zipWithIndex, memo)
       case arg: Seq[_] => convertList(arg, arg.zipWithIndex.iterator, memo)
+      case arg: java.lang.Iterable[_] => convertList(arg, arg.zipWithIndex.iterator, memo)
 
       case arg: Map[_, _] => convertMap(arg, arg, memo)
       case arg: mutable.Map[_, _] => convertMap(arg, arg.toMap, memo)
@@ -116,6 +117,11 @@ private[oc] object Registry extends api.detail.DriverAPI {
         if (converted.isEmpty) {
           memo += arg -> null
           null
+        }
+        else if (converted.size == 1 && converted.containsKey("oc:flatten")) {
+          val value = converted.get("oc:flatten")
+          memo += arg -> value // Update memoization map.
+          value
         }
         else {
           // This is a little nasty but necessary because we need to keep the

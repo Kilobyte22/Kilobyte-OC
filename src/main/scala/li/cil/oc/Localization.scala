@@ -50,6 +50,8 @@ object Localization {
     def WarningPower = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningPower"))
 
     def WarningFingerprint(event: FMLFingerprintViolationEvent) = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningFingerprint", event.expectedFingerprint, event.fingerprints.toArray.mkString(", ")))
+
+    def InfoNewVersion(version: String) = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.NewVersion", version))
   }
 
   object Robot {
@@ -116,6 +118,8 @@ object Localization {
 
   object Tooltip {
     def Materials = localizeImmediately("tooltip.Materials")
+
+    def Tier(tier: Int) = localizeImmediately("tooltip.Tier", tier.toString)
   }
 
 }

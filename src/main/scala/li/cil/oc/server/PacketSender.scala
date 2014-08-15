@@ -7,6 +7,7 @@ import li.cil.oc.common.{CompressedPacketBuilder, PacketBuilder, PacketType, til
 import li.cil.oc.util.PackedColor
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
 import net.minecraftforge.common.ForgeDirection
 
@@ -308,6 +309,15 @@ object PacketSender {
     pb.sendToNearbyPlayers(container)
   }
 
+  def sendTextBufferInit(address: String, value: NBTTagCompound, player: EntityPlayerMP) {
+    val pb = new CompressedPacketBuilder(PacketType.TextBufferInit)
+
+    pb.writeUTF(address)
+    pb.writeNBT(value)
+
+    pb.sendToPlayer(player)
+  }
+
   def sendTextBufferPaletteChange(address: String, index: Int, color: Int, container: Container) {
     val pb = new PacketBuilder(PacketType.TextBufferPaletteChange)
 
@@ -347,6 +357,15 @@ object PacketSender {
     pb.writeBoolean(vertical)
 
     pb.sendToNearbyPlayers(container)
+  }
+
+  def sendScreenTouchMode(t: tileentity.Screen, value: Boolean) {
+    val pb = new PacketBuilder(PacketType.ScreenTouchMode)
+
+    pb.writeTileEntity(t)
+    pb.writeBoolean(value)
+
+    pb.sendToNearbyPlayers(t)
   }
 
   def sendServerPresence(t: tileentity.ServerRack) {

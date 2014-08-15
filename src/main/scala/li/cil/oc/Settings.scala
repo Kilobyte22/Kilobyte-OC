@@ -38,6 +38,14 @@ class Settings(config: Config) {
   val hologramFadeStartDistance = config.getDouble("client.hologramFadeStartDistance") max 0
   val hologramRenderDistance = config.getDouble("client.hologramRenderDistance") max 0
   val hologramFlickerFrequency = config.getDouble("client.hologramFlickerFrequency") max 0
+  val hologramMaxScaleByTier = Array(config.getDoubleList("client.hologramMaxScale"): _*) match {
+    case Array(tier1, tier2) =>
+      Array((tier1: Double) max 1.0, (tier2: Double) max 1.0)
+    case _ =>
+      OpenComputers.log.warning("Bad number of hologram max scales, ignoring.")
+      Array(3.0, 4.0)
+  }
+  val monochromeColor = Integer.decode(config.getString("client.monochromeColor"))
   val logOpenGLErrors = config.getBoolean("client.logOpenGLErrors")
   val useOldTextureFontRenderer = config.getBoolean("client.useOldTextureFontRenderer")
 
@@ -128,18 +136,14 @@ class Settings(config: Config) {
   // power
 
   val pureIgnorePower = config.getBoolean("power.ignorePower")
-  val ignorePower = pureIgnorePower ||
-    (!Mods.BuildCraftPower.isAvailable &&
-      !Mods.IndustrialCraft2.isAvailable &&
-      !Mods.Mekanism.isAvailable &&
-      !Mods.ThermalExpansion.isAvailable &&
-      !Mods.UniversalElectricity.isAvailable)
+  lazy val ignorePower = pureIgnorePower || !Mods.isPowerProvidingModPresent
   val tickFrequency = config.getDouble("power.tickFrequency") max 1
   val chargeRate = config.getDouble("power.chargerChargeRate")
   val generatorEfficiency = config.getDouble("power.generatorEfficiency")
   val solarGeneratorEfficiency = config.getDouble("power.solarGeneratorEfficiency")
   val assemblerTickAmount = config.getDouble("power.assemblerTickAmount") max 1
   val disassemblerTickAmount = config.getDouble("power.disassemblerTickAmount") max 1
+  val powerModBlacklist = config.getStringList("power.modBlacklist")
 
   // power.buffer
   val bufferCapacitor = config.getDouble("power.buffer.capacitor") max 0
@@ -250,7 +254,6 @@ object Settings {
   val scriptPath = "/assets/" + resourceDomain + "/lua/"
   val screenResolutionsByTier = Array((50, 16), (80, 25), (160, 50))
   val screenDepthsByTier = Array(ColorDepth.OneBit, ColorDepth.FourBit, ColorDepth.EightBit)
-  val hologramMaxScaleByTier = Array(3, 4)
   val robotComplexityByTier = Array(12, 24, 32, 9001)
   var rTreeDebugRenderer = false
   var blockRenderId = -1
@@ -258,6 +261,7 @@ object Settings {
   // Power conversion values. These are the same values used by Universal
   // Electricity to provide global power support.
   val valueBuildCraft = 500.0
+  val valueFactorization = 6.5
   val valueIndustrialCraft2 = 200.0
   val valueMekanism = 250.0 / 9.0
   val valueThermalExpansion = 50.0
@@ -266,6 +270,7 @@ object Settings {
   val valueInternal = valueBuildCraft
 
   val ratioBuildCraft = valueBuildCraft / valueInternal
+  val ratioFactorization = valueFactorization / valueInternal
   val ratioIndustrialCraft2 = valueIndustrialCraft2 / valueInternal
   val ratioMekanism = valueMekanism / valueInternal
   val ratioThermalExpansion = valueThermalExpansion / valueInternal
@@ -332,6 +337,11 @@ object Settings {
       "computer.ramSizes",
       "internet.blacklist",
       "internet.whitelist"
+    ),
+    // Upgrading to version 1.3.3, default power consumption of chunk loader
+    // reduced as discussed in #447.
+    VersionRange.createFromVersionSpec("[1.3.0,1.3.3)") -> Array(
+      "power.cost.chunkloaderCost"
     )
   )
 

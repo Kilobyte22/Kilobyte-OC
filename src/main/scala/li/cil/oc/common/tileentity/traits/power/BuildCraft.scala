@@ -6,11 +6,10 @@ import li.cil.oc.Settings
 import li.cil.oc.util.mods.Mods
 import net.minecraftforge.common.ForgeDirection
 
-@Optional.Interface(iface = "buildcraft.api.power.IPowerReceptor", modid = Mods.IDs.BuildCraftPower)
-trait BuildCraft extends Common with IPowerReceptor {
-  private var powerHandler: Option[AnyRef] = None
+trait BuildCraft extends Common {
+  private lazy val useBuildCraftPower = isServer && Mods.BuildCraftPower.isAvailable
 
-  private lazy val useBuildCraftPower = isServer && !Settings.get.ignorePower && Mods.BuildCraftPower.isAvailable
+  private var powerHandler: Option[AnyRef] = None
 
   // ----------------------------------------------------------------------- //
 
@@ -31,8 +30,8 @@ trait BuildCraft extends Common with IPowerReceptor {
 
   @Optional.Method(modid = Mods.IDs.BuildCraftPower)
   def getPowerProvider = {
-    if (powerHandler.isEmpty) {
-      val handler = new PowerHandler(this, PowerHandler.Type.MACHINE)
+    if (Mods.BuildCraftPower.isAvailable && powerHandler.isEmpty) {
+      val handler = new PowerHandler(this.asInstanceOf[IPowerReceptor], PowerHandler.Type.MACHINE)
       if (handler != null) {
         handler.configure(1, 320, Float.MaxValue, 640)
         handler.configurePowerPerdition(0, 0)
@@ -46,7 +45,7 @@ trait BuildCraft extends Common with IPowerReceptor {
 
   @Optional.Method(modid = Mods.IDs.BuildCraftPower)
   def getPowerReceiver(side: ForgeDirection) =
-    if (canConnectPower(side))
+    if (Mods.BuildCraftPower.isAvailable && canConnectPower(side))
       getPowerProvider.getPowerReceiver
     else null
 

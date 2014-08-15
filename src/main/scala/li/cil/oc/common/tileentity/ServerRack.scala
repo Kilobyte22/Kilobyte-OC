@@ -9,7 +9,7 @@ import li.cil.oc._
 import li.cil.oc.api.Network
 import li.cil.oc.api.network._
 import li.cil.oc.client.Sound
-import li.cil.oc.common.InventorySlots.Tier
+import li.cil.oc.common.Tier
 import li.cil.oc.server.{component, driver, PacketSender => ServerPacketSender}
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.mods.{Mods, Waila}
@@ -149,7 +149,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
   override protected def relayPacket(sourceSide: ForgeDirection, packet: Packet) {
     if (internalSwitch) {
       for (slot <- 0 until servers.length) {
-        val side = sides(slot)
+        val side = toGlobal(sides(slot))
         if (side != sourceSide) {
           servers(slot) match {
             case Some(server) => server.node.sendToNeighbors("network.message", packet)
@@ -363,8 +363,9 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
       for (number <- 0 until servers.length) {
         val serverSide = sides(number)
         servers(number) match {
-          case Some(server) if toGlobal(serverSide) == plug.side =>
-            plug.node.connect(server.machine.node)
+          case Some(server) =>
+            if (toGlobal(serverSide) == plug.side) plug.node.connect(server.machine.node)
+            else api.Network.joinNewNetwork(server.machine.node)
             terminals(number).connect(server.machine.node)
           case _ =>
         }

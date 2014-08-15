@@ -1,11 +1,14 @@
 package li.cil.oc.common
 
 import java.io
-import java.io.{File, FileFilter}
+import java.io._
 import java.util.logging.Level
 
+import li.cil.oc.api.driver.Container
+import li.cil.oc.api.machine.Owner
 import li.cil.oc.{OpenComputers, Settings}
-import net.minecraft.world.ChunkCoordIntPair
+import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
+import net.minecraft.world.{ChunkCoordIntPair, World}
 import net.minecraftforge.common.DimensionManager
 import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.{ChunkDataEvent, WorldEvent}
@@ -23,6 +26,49 @@ object SaveHandler {
   def savePath = new io.File(DimensionManager.getCurrentSaveRootDirectory, Settings.savePath)
 
   def statePath = new io.File(savePath, "state")
+
+  def scheduleSave(owner: Owner, nbt: NBTTagCompound, name: String, data: Array[Byte]) {
+    scheduleSave(owner.world, owner.x, owner.z, nbt, name, data)
+  }
+
+  def scheduleSave(container: Container, nbt: NBTTagCompound, name: String, save: NBTTagCompound => Unit) {
+    val tmpNbt = new NBTTagCompound()
+    save(tmpNbt)
+    val baos = new ByteArrayOutputStream()
+    val dos = new DataOutputStream(baos)
+    CompressedStreamTools.write(tmpNbt, dos)
+    scheduleSave(container.world, math.round(container.xPosition - 0.5).toInt, math.round(container.zPosition - 0.5).toInt, nbt, name, baos.toByteArray)
+  }
+
+  def scheduleSave(world: World, x: Int, z: Int, nbt: NBTTagCompound, name: String, data: Array[Byte]) {
+    val dimension = world.provider.dimensionId
+    val chunk = new ChunkCoordIntPair(x >> 4, z >> 4)
+
+    // We have to save the dimension and chunk coordinates, because they are
+    // not available on load / may have changed if the computer was moved.
+    nbt.setInteger("dimension", dimension)
+    nbt.setInteger("chunkX", chunk.chunkXPos)
+    nbt.setInteger("chunkZ", chunk.chunkZPos)
+
+    scheduleSave(dimension, chunk, name, data)
+  }
+
+  def loadNBT(nbt: NBTTagCompound, name: String): NBTTagCompound = {
+    val data = load(nbt, name)
+    val bais = new ByteArrayInputStream(data)
+    val dis = new DataInputStream(bais)
+    CompressedStreamTools.read(dis)
+  }
+
+  def load(nbt: NBTTagCompound, name: String): Array[Byte] = {
+    // Since we have no world yet, we rely on the dimension we were saved in.
+    // Same goes for the chunk. This also works around issues with computers
+    // being moved (e.g. Redstone in Motion).
+    val dimension = nbt.getInteger("dimension")
+    val chunk = new ChunkCoordIntPair(nbt.getInteger("chunkX"), nbt.getInteger("chunkZ"))
+
+    load(dimension, chunk, name)
+  }
 
   def scheduleSave(dimension: Int, chunk: ChunkCoordIntPair, name: String, data: Array[Byte]) = saveData.synchronized {
     if (chunk == null) throw new IllegalArgumentException("chunk is null")
@@ -119,9 +165,14 @@ object SaveHandler {
       }
     }
 
-    // Delete empty folders that match a drive UUID to keep the state folder clean.
+    // Delete empty folders to keep the state folder clean.
     val emptyDirs = savePath.listFiles(new FileFilter {
-      override def accept(file: File) = file.getName.matches(uuidRegex) && file.isDirectory && {
+      override def accept(file: File) = file.isDirectory &&
+        // Make sure we only consider file system folders (UUID).
+        file.getName.matches(uuidRegex) &&
+        // We set the modified time in the save() method of unbuffered file
+        // systems, to avoid deleting in-use folders here.
+        System.currentTimeMillis() - file.lastModified() > 60 * 1000 && {
         val list = file.list()
         list == null || list.length == 0
       }

@@ -31,10 +31,12 @@ object PacketType extends Enumeration {
   TextBufferCopy,
   TextBufferDepthChange,
   TextBufferFill,
+  TextBufferInit, // Goes both ways.
   TextBufferPaletteChange,
   TextBufferPowerChange,
   TextBufferResolutionChange,
   TextBufferSet,
+  ScreenTouchMode,
   ServerPresence,
   Sound,
 

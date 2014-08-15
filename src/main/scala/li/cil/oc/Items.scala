@@ -2,9 +2,8 @@ package li.cil.oc
 
 import cpw.mods.fml.common.registry.GameRegistry
 import li.cil.oc.api.detail.{ItemAPI, ItemInfo}
-import li.cil.oc.common.InventorySlots.Tier
 import li.cil.oc.common.recipe.Recipes
-import li.cil.oc.common.{Loot, item}
+import li.cil.oc.common.{Loot, Tier, item}
 import li.cil.oc.util.Color
 import li.cil.oc.util.mods.Mods
 import net.minecraft.block.Block
@@ -240,5 +239,11 @@ object Items extends ItemAPI {
 
     // 1.3.2 (cont.)
     registerItem(new item.Server(multi, Tier.Four), "serverCreative")
+
+    // 1.3.3
+    Recipes.addItem(new item.ComponentBus(multi, Tier.One), "componentBus1", "oc:componentBus1")
+    Recipes.addItem(new item.ComponentBus(multi, Tier.Two), "componentBus2", "oc:componentBus2")
+    Recipes.addItem(new item.ComponentBus(multi, Tier.Three), "componentBus3", "oc:componentBus3")
+    registerItem(new item.DebugCard(multi), "debugCard")
   }
 }
