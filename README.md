@@ -18,7 +18,7 @@ This mod is [licensed under the **MIT license**](https://github.com/MightyPirate
 ## Contributing
 ###Assets and Localizations
 1. **Translations**  
-   Translations to other languages are very much appreciated. You can find the localization files [in this folder][localizations]. If a localization you wanted to create already exists, please take the time to see if the present one is complete - the strings change every so often, invalidating some of the translations. If you start a fresh localization, please base it off of the English or German one, those are the 'master' localization files. If you add a new language, please also add it to [the pack.mcmeta][pack.mcmeta] file. Keep it sorted alphabetically, use the name and region Minecraft itself uses. If you don't know how to do that, that's OK, I'll do it later.
+   Translations to other languages are very much appreciated. You can find the localization files [in this directory][localizations]. If a localization you wanted to create already exists, please take the time to see if the present one is complete - the strings change every so often, invalidating some of the translations. If you start a fresh localization, please base it off of the English or German one, those are the 'master' localization files. If you add a new language, please also add it to [the pack.mcmeta][pack.mcmeta] file. Keep it sorted alphabetically, use the name and region Minecraft itself uses. If you don't know how to do that, that's OK, I'll do it later.
 2. **Textures**  
    If you would like to contribute better textures for certain items or blocks, feel free to pull-request them. If you would like to contribute *alternative* textures, make it a resource pack, and post it on the forums, for example.
 3. **Documentation**  
@@ -50,9 +50,9 @@ dependencies {
 ```
 Adjust the version number accordingly to the version you'd like to build against.
 
-To run the mod in your development environment, download the [`deobf` JAR from the build server][deobf-jar] and drop it into your dev env's `eclipse/mods` folder. **Important**: mark the `api/java/codechicken/lib/vec` folder as *excluded* in your IDE, to avoid issues when running/building the project in it.
+To run the mod in your development environment, download the [`deobf` JAR from the build server][deobf-jar] and drop it into your dev env's `eclipse/mods` directory. **Important**: mark the `api/java/codechicken/lib/vec` directory as *excluded* in your IDE, to avoid issues when running/building the project in it.
 
-Alternatively, leave out the `api` classifier and you can build against the deobf JAR directly. This way you don't have to add it to your mods folder, but you will have to add `-Dfml.coreMods.load=li.cil.oc.common.launch.TransformerLoader` to the VM options in your run configuration.
+Alternatively, leave out the `api` classifier and you can build against the deobf JAR directly. This way you don't have to add it to your mods directory, but you will have to add `-Dfml.coreMods.load=li.cil.oc.common.launch.TransformerLoader` to the VM options in your run configuration.
 
 If you have any questions, please do not hesitate to ask, either in the [forums][] or in the [IRC][irc]!
 
