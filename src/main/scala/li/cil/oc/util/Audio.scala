@@ -1,13 +1,13 @@
 package li.cil.oc.util
 
 import java.nio.ByteBuffer
-import java.util
 
-import cpw.mods.fml.common.registry.TickRegistry
-import cpw.mods.fml.common.{ITickHandler, TickType}
-import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.common.FMLCommonHandler
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent
 import li.cil.oc.OpenComputers
 import net.minecraft.client.Minecraft
+import net.minecraft.client.audio.SoundCategory
 import org.lwjgl.BufferUtils
 import org.lwjgl.openal.{AL, AL10, Util}
 
@@ -20,12 +20,12 @@ import scala.collection.mutable
  * Tones that have finished playing are disposed automatically in the
  * tick handler.
  */
-object Audio extends ITickHandler {
+object Audio {
   private def sampleRate = 8000
 
   private val sources = mutable.Set.empty[Source]
 
-  private def volume = Minecraft.getMinecraft.gameSettings.soundVolume
+  private def volume = Minecraft.getMinecraft.gameSettings.getSoundLevel(SoundCategory.BLOCKS)
 
   private var errored = false
 
@@ -64,7 +64,7 @@ object Audio extends ITickHandler {
       if (AL.isCreated) {
         try AL10.alGetError() catch {
           case _: UnsatisfiedLinkError =>
-            OpenComputers.log.warning("Negotiations with OpenAL broke down, disabling sounds.")
+            OpenComputers.log.warn("Negotiations with OpenAL broke down, disabling sounds.")
             errored = true
         }
       }
@@ -119,15 +119,10 @@ object Audio extends ITickHandler {
     }
   }
 
-  TickRegistry.registerTickHandler(this, Side.CLIENT)
+  FMLCommonHandler.instance.bus.register(this)
 
-  override def getLabel = "OpenComputers - Audio"
-
-  override def ticks = util.EnumSet.of(TickType.CLIENT)
-
-  override def tickStart(`type`: util.EnumSet[TickType], tickData: AnyRef*) {}
-
-  override def tickEnd(`type`: util.EnumSet[TickType], tickData: AnyRef*) {
+  @SubscribeEvent
+  def onTick(e: ClientTickEvent) {
     update()
   }
 }

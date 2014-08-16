@@ -15,15 +15,15 @@ object Blocks {
   var robotAfterimage: RobotAfterimage = _
 
   def init() {
-    blockSimple = new SimpleDelegator(Settings.get.blockId1)
-    blockSimpleWithRedstone = new SimpleRedstoneDelegator(Settings.get.blockId2)
-    blockSpecial = new SpecialDelegator(Settings.get.blockId3)
-    blockSpecialWithRedstone = new SpecialRedstoneDelegator(Settings.get.blockId4)
+    blockSimple = new SimpleDelegator()
+    blockSimpleWithRedstone = new SimpleRedstoneDelegator()
+    blockSpecial = new SpecialDelegator()
+    blockSpecialWithRedstone = new SpecialRedstoneDelegator()
 
-    GameRegistry.registerBlock(blockSimple, classOf[Item], Settings.namespace + "simple")
-    GameRegistry.registerBlock(blockSimpleWithRedstone, classOf[Item], Settings.namespace + "simple_redstone")
-    GameRegistry.registerBlock(blockSpecial, classOf[Item], Settings.namespace + "special")
-    GameRegistry.registerBlock(blockSpecialWithRedstone, classOf[Item], Settings.namespace + "special_redstone")
+    GameRegistry.registerBlock(blockSimple, classOf[Item], "simple")
+    GameRegistry.registerBlock(blockSimpleWithRedstone, classOf[Item], "simple_redstone")
+    GameRegistry.registerBlock(blockSpecial, classOf[Item], "special")
+    GameRegistry.registerBlock(blockSpecialWithRedstone, classOf[Item], "special_redstone")
 
     GameRegistry.registerTileEntity(classOf[tileentity.Adapter], Settings.namespace + "adapter")
     GameRegistry.registerTileEntity(classOf[tileentity.Cable], Settings.namespace + "cable")
@@ -57,13 +57,14 @@ object Blocks {
     Recipes.addBlock(new Case(blockSimpleWithRedstone, Tier.Three), "case3", "oc:case3")
     Recipes.addBlock(new Charger(blockSimpleWithRedstone), "charger", "oc:charger")
     Recipes.addBlock(new DiskDrive(blockSimple), "diskDrive", "oc:diskDrive")
-    Recipes.addBlock(new Keyboard(blockSpecial), "keyboard", "oc:keyboard")
+    new KeyboardDeprecated(blockSpecial)
     Recipes.addBlock(new PowerDistributor(blockSimple), "powerDistributor", "oc:powerDistributor")
     Recipes.addBlock(new PowerConverter(blockSimple), "powerConverter", "oc:powerConverter")
     Recipes.addBlock(new Redstone(blockSimpleWithRedstone), "redstone", "oc:redstone")
     robotAfterimage = new RobotAfterimage(blockSpecial)
     robotProxy = Items.registerBlock(new RobotProxy(blockSpecialWithRedstone), "robot")
     Recipes.addBlock(new Switch(blockSimple), "switch", "oc:switch")
+
     // Copied to simple block for automatic conversion from old format (when
     // screens did not take redstone inputs) to keep save format compatible.
     blockSimple.subBlocks += Recipes.addBlock(new Screen(blockSimpleWithRedstone, Tier.One), "screen1", "oc:screen1")
@@ -72,6 +73,9 @@ object Blocks {
 
     // v1.2.0
     Recipes.addBlock(new ServerRack(blockSpecialWithRedstone), "rack", "oc:rack")
+
+    // MC 1.7
+    Recipes.addNewBlock(new Keyboard(), "keyboard", "oc:keyboard")
 
     // v1.2.2
     Recipes.addBlock(new Hologram(blockSpecial, Tier.One), "hologram1", "oc:hologram1")

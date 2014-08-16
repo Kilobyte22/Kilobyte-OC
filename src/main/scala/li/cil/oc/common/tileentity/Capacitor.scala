@@ -2,7 +2,7 @@ package li.cil.oc.common.tileentity
 
 import li.cil.oc.api.network.{Node, Visibility}
 import li.cil.oc.{Settings, api}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Capacitor extends traits.Environment {
   // Start with maximum theoretical capacity, gets reduced after validation.
@@ -20,7 +20,7 @@ class Capacitor extends traits.Environment {
     if (isServer) {
       indirectNeighbors.map(coordinate => {
         val (nx, ny, nz) = coordinate
-        world.getBlockTileEntity(nx, ny, nz)
+        world.getTileEntity(nx, ny, nz)
       }).collect {
         case capacitor: Capacitor => capacitor.recomputeCapacity()
       }
@@ -40,13 +40,13 @@ class Capacitor extends traits.Environment {
     node.setLocalBufferSize(
       Settings.get.bufferCapacitor +
         Settings.get.bufferCapacitorAdjacencyBonus * ForgeDirection.VALID_DIRECTIONS.count(side => {
-          world.getBlockTileEntity(x + side.offsetX, y + side.offsetY, z + side.offsetZ) match {
+          world.getTileEntity(x + side.offsetX, y + side.offsetY, z + side.offsetZ) match {
             case capacitor: Capacitor => true
             case _ => false
           }
         }) +
         Settings.get.bufferCapacitorAdjacencyBonus / 2 * indirectNeighbors.count {
-          case (nx, ny, nz) => world.getBlockTileEntity(nx, ny, nz) match {
+          case (nx, ny, nz) => world.getTileEntity(nx, ny, nz) match {
             case capacitor: Capacitor =>
               if (updateSecondGradeNeighbors) {
                 capacitor.recomputeCapacity()

@@ -7,13 +7,14 @@ import li.cil.oc.api.driver.Container
 import li.cil.oc.api.fs.{Label, Mode, FileSystem => IFileSystem}
 import li.cil.oc.api.network._
 import li.cil.oc.common.{Sound, component}
-import li.cil.oc.server.driver.item.{CC15Media, CC16Media}
+import li.cil.oc.server.driver.item.ComputerCraftMedia
 import li.cil.oc.server.fs.FileSystem.ItemLabel
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.mods.Mods
 import li.cil.oc.{Settings, api}
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.{NBTTagCompound, NBTTagInt, NBTTagList}
+import net.minecraft.nbt.{NBTTagCompound, NBTTagIntArray, NBTTagList}
+import net.minecraftforge.common.util.Constants.NBT
 
 import scala.collection.mutable
 
@@ -248,15 +249,14 @@ class FileSystem(val fileSystem: IFileSystem, var label: Label, val container: O
   override def load(nbt: NBTTagCompound) {
     super.load(nbt)
 
-    val ownersNbt = nbt.getTagList("owners")
-    (0 until ownersNbt.tagCount).map(ownersNbt.tagAt).map(_.asInstanceOf[NBTTagCompound]).foreach(ownerNbt => {
+    nbt.getTagList("owners", NBT.TAG_COMPOUND).foreach((list, index) => {
+      val ownerNbt = list.getCompoundTagAt(index)
       val address = ownerNbt.getString("address")
       if (address != "") {
-        val handlesNbt = ownerNbt.getTagList("handles")
-        owners += address -> (0 until handlesNbt.tagCount).
-          map(handlesNbt.tagAt).
-          map(_.asInstanceOf[NBTTagInt].data).
-          to[mutable.Set]
+        // Was tag list in 1.6, so wee need to check this when upgrading.
+        if (ownerNbt.hasKey("handles", NBT.TAG_INT_ARRAY)) {
+          owners += address -> ownerNbt.getIntArray("handles").to[mutable.Set]
+        }
       }
     })
 
@@ -273,11 +273,7 @@ class FileSystem(val fileSystem: IFileSystem, var label: Label, val container: O
     for ((address, handles) <- owners) {
       val ownerNbt = new NBTTagCompound()
       ownerNbt.setString("address", address)
-      val handlesNbt = new NBTTagList()
-      for (handle <- handles) {
-        handlesNbt.appendTag(new NBTTagInt(null, handle))
-      }
-      ownerNbt.setTag("handles", handlesNbt)
+      ownerNbt.setTag("handles", new NBTTagIntArray(handles.toArray))
       ownersNbt.appendTag(ownerNbt)
     }
     nbt.setTag("owners", ownersNbt)
@@ -328,13 +324,8 @@ class FileSystem(val fileSystem: IFileSystem, var label: Label, val container: O
             Sound.playDiskActivity(c, isFloppy = false)
           }
         case _ =>
-          if (Mods.ComputerCraft15.isAvailable) {
-            if (label.isInstanceOf[CC15Media.ComputerCraftLabel]) {
-              Sound.playDiskActivity(c, isFloppy = true)
-            }
-          }
-          if (Mods.ComputerCraft16.isAvailable) {
-            if (label.isInstanceOf[CC16Media.ComputerCraftLabel]) {
+          if (Mods.ComputerCraft.isAvailable) {
+            if (label.isInstanceOf[ComputerCraftMedia.ComputerCraftLabel]) {
               Sound.playDiskActivity(c, isFloppy = true)
             }
           }

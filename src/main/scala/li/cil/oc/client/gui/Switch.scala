@@ -13,27 +13,27 @@ class Switch(playerInventory: InventoryPlayer, val switch: tileentity.Switch) ex
 
   override def drawGuiContainerForegroundLayer(mouseX: Int, mouseY: Int) = {
     super.drawGuiContainerForegroundLayer(mouseX, mouseY)
-    fontRenderer.drawString(
-      StatCollector.translateToLocal(switch.getInvName),
+    fontRendererObj.drawString(
+      StatCollector.translateToLocal(switch.getInventoryName),
       8, 6, 0x404040)
 
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       Localization.Switch.TransferRate,
       14, 20, 0x404040)
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       Localization.Switch.PacketsPerCycle,
       14, 39, 0x404040)
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       Localization.Switch.QueueSize,
       14, 58, 0x404040)
 
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       format.format(20f / switchContainer.relayDelay),
       108, 20, 0x404040)
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       switchContainer.packetsPerCycleAvg + " / " + switchContainer.relayAmount,
       108, 39, thresholdBasedColor(switchContainer.packetsPerCycleAvg, math.ceil(switchContainer.relayAmount / 2f).toInt, switchContainer.relayAmount))
-    fontRenderer.drawString(
+    fontRendererObj.drawString(
       switchContainer.queueSize + " / " + switchContainer.maxQueueSize,
       108, 58, thresholdBasedColor(switchContainer.queueSize, switchContainer.maxQueueSize / 2, switchContainer.maxQueueSize))
   }

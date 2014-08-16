@@ -9,22 +9,30 @@ import net.minecraft.block.Block
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.{EnumRarity, ItemBlock, ItemStack}
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
-class Item(id: Int) extends ItemBlock(id) {
+class Item(value: Block) extends ItemBlock(value) {
   setHasSubtypes(true)
+
+  def block = field_150939_a
 
   override def addInformation(stack: ItemStack, player: EntityPlayer, tooltip: util.List[_], advanced: Boolean) {
     super.addInformation(stack, player, tooltip, advanced)
-    Block.blocksList(getBlockID) match {
+    block match {
       case delegator: Delegator[_] => delegator.addInformation(getMetadata(stack.getItemDamage), stack, player, tooltip.asInstanceOf[util.List[String]], advanced)
-      case _ =>
+      case _ => block match {
+        case simple: SimpleBlock => simple.tooltipLines(getMetadata(stack.getItemDamage), stack, player, tooltip.asInstanceOf[util.List[String]], advanced)
+        case _ =>
+      }
     }
   }
 
   override def getRarity(stack: ItemStack) = Delegator.subBlock(stack) match {
     case Some(subBlock) => subBlock.rarity
-    case _ => EnumRarity.common
+    case _ => block match {
+      case simple: SimpleBlock => simple.rarity
+      case _ => EnumRarity.common
+    }
   }
 
   override def getMetadata(itemDamage: Int) = itemDamage
@@ -32,9 +40,9 @@ class Item(id: Int) extends ItemBlock(id) {
   override def getUnlocalizedName = Settings.namespace + "tile"
 
   override def getUnlocalizedName(stack: ItemStack) =
-    Block.blocksList(getBlockID) match {
+    block match {
       case delegator: Delegator[_] => Settings.namespace + "tile." + delegator.getUnlocalizedName(stack.getItemDamage)
-      case block => block.getUnlocalizedName
+      case _ => block.getUnlocalizedName
     }
 
   override def isBookEnchantable(a: ItemStack, b: ItemStack) = false
@@ -47,7 +55,7 @@ class Item(id: Int) extends ItemBlock(id) {
     val stackToUse = if (needsCopying) new ItemUtils.RobotData(stack).copyItemStack() else stack
     if (super.placeBlockAt(stackToUse, player, world, x, y, z, side, hitX, hitY, hitZ, metadata)) {
       // If it's a rotatable block try to make it face the player.
-      world.getBlockTileEntity(x, y, z) match {
+      world.getTileEntity(x, y, z) match {
         case keyboard: tileentity.Keyboard =>
           keyboard.setFromEntityPitchAndYaw(player)
           keyboard.setFromFacing(ForgeDirection.getOrientation(side))

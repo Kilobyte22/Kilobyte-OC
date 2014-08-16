@@ -7,6 +7,7 @@ import java.nio.channels.ReadableByteChannel
 import li.cil.oc.api
 import li.cil.oc.api.fs.Mode
 import net.minecraft.nbt.{NBTTagCompound, NBTTagList}
+import net.minecraftforge.common.util.Constants.NBT
 
 import scala.collection.mutable
 
@@ -48,8 +49,8 @@ trait InputStreamFileSystem extends api.fs.FileSystem {
   // ----------------------------------------------------------------------- //
 
   override def load(nbt: NBTTagCompound) {
-    val handlesNbt = nbt.getTagList("input")
-    (0 until handlesNbt.tagCount).map(handlesNbt.tagAt).map(_.asInstanceOf[NBTTagCompound]).foreach(handleNbt => {
+    val handlesNbt = nbt.getTagList("input", NBT.TAG_COMPOUND)
+    (0 until handlesNbt.tagCount).map(handlesNbt.getCompoundTagAt).foreach(handleNbt => {
       val handle = handleNbt.getInteger("handle")
       val path = handleNbt.getString("path")
       val position = handleNbt.getLong("position")

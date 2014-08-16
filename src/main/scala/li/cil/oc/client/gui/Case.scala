@@ -35,20 +35,19 @@ class Case(playerInventory: InventoryPlayer, val computer: tileentity.Case) exte
   override def drawGuiContainerForegroundLayer(mouseX: Int, mouseY: Int) = {
     super.drawGuiContainerForegroundLayer(mouseX, mouseY)
     GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS) // Me lazy... prevents NEI render glitch.
-    fontRenderer.drawString(
-      StatCollector.translateToLocal(computer.getInvName),
+    fontRendererObj.drawString(
+      StatCollector.translateToLocal(computer.getInventoryName),
       8, 6, 0x404040)
-    if (powerButton.func_82252_a) {
+    if (powerButton.func_146115_a) {
       val tooltip = new java.util.ArrayList[String]
       tooltip.add(if (computer.isRunning) Localization.Robot.TurnOff else Localization.Robot.TurnOn)
-      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
     }
     GL11.glPopAttrib()
   }
 
-  override def drawGuiContainerBackgroundLayer(dt: Float, mouseX: Int, mouseY: Int) {
+  override def drawSecondaryBackgroundLayer() {
     GL11.glColor3f(1, 1, 1) // Required under Linux.
-    super.drawGuiContainerBackgroundLayer(dt, mouseX, mouseY)
     mc.renderEngine.bindTexture(Textures.guiComputer)
     drawTexturedModalRect(guiLeft, guiTop, 0, 0, xSize, ySize)
   }

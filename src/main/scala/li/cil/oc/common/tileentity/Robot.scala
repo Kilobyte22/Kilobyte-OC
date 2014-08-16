@@ -13,12 +13,13 @@ import li.cil.oc.server.component.robot.Inventory
 import li.cil.oc.server.{driver, PacketSender => ServerPacketSender}
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.ItemUtils
-import net.minecraft.block.{Block, BlockFlowing}
+import net.minecraft.block.{Block, BlockLiquid}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.{ForgeDirection, MinecraftForge}
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.{BlockFluidBase, FluidRegistry}
 
 import scala.collection.mutable
@@ -111,8 +112,8 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
   def name = info.name
 
   override def onAnalyze(player: EntityPlayer, side: Int, hitX: Float, hitY: Float, hitZ: Float) = {
-    player.sendChatToPlayer(Localization.Analyzer.RobotOwner(owner))
-    player.sendChatToPlayer(Localization.Analyzer.RobotName(player_.getCommandSenderName))
+    player.addChatMessage(Localization.Analyzer.RobotOwner(owner))
+    player.addChatMessage(Localization.Analyzer.RobotName(player_.getCommandSenderName))
     MinecraftForge.EVENT_BUS.post(new RobotAnalyzeEvent(this, player))
     super.onAnalyze(player, side, hitX, hitY, hitZ)
   }
@@ -137,7 +138,8 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
       if (event.isCanceled) return false
     }
 
-    val blockId = world.getBlockId(nx, ny, nz)
+    val wasAir = world.isAirBlock(nx, ny, nz)
+    val block = world.getBlock(nx, ny, nz)
     val metadata = world.getBlockMetadata(nx, ny, nz)
     try {
       // Setting this will make the tile entity created via the following call
@@ -152,12 +154,12 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
       // In some cases (though I couldn't quite figure out which one) setBlock
       // will return true, even though the block was not created / adjusted.
       val created = Blocks.robotProxy.setBlock(world, nx, ny, nz, 1) &&
-        world.getBlockTileEntity(nx, ny, nz) == proxy
+        world.getTileEntity(nx, ny, nz) == proxy
       if (created) {
         assert(x == nx && y == ny && z == nz)
-        world.setBlock(ox, oy, oz, 0, 0, 1)
+        world.setBlock(ox, oy, oz, net.minecraft.init.Blocks.air, 0, 1)
         Blocks.robotAfterimage.setBlock(world, ox, oy, oz, 1)
-        assert(Delegator.subBlock(world, ox, oy, oz).exists(_ == Blocks.robotAfterimage))
+        assert(Delegator.subBlock(world, ox, oy, oz).contains(Blocks.robotAfterimage))
         // Here instead of Lua callback so that it gets called on client, too.
         val moveTicks = math.max((Settings.get.moveDelay * 20).toInt, 1)
         setAnimateMove(ox, oy, oz, moveTicks)
@@ -168,13 +170,12 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
         }
         else {
           // If we broke some replaceable block (like grass) play its break sound.
-          if (blockId > 0) {
-            val block = Block.blocksList(blockId)
-            if (block != null && !Delegator.subBlock(block, metadata).exists(_ == Blocks.robotAfterimage)) {
+          if (!wasAir) {
+            if (block != null && !Delegator.subBlock(block, metadata).contains(Blocks.robotAfterimage)) {
               if (FluidRegistry.lookupFluidForBlock(block) == null &&
                 !block.isInstanceOf[BlockFluidBase] &&
-                !block.isInstanceOf[BlockFlowing]) {
-                world.playAuxSFX(2001, nx, ny, nz, blockId + (metadata << 12))
+                !block.isInstanceOf[BlockLiquid]) {
+                world.playAuxSFX(2001, nx, ny, nz, Block.getIdFromBlock(block) + (metadata << 12))
               }
               else {
                 world.playSound(nx + 0.5, ny + 0.5, nz + 0.5, "liquid.water",
@@ -182,8 +183,8 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
               }
             }
           }
-          world.markBlockForRenderUpdate(ox, oy, oz)
-          world.markBlockForRenderUpdate(nx, ny, nz)
+          world.markBlockForUpdate(ox, oy, oz)
+          world.markBlockForUpdate(nx, ny, nz)
         }
         assert(!isInvalid)
       }
@@ -461,8 +462,8 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
     }
   }
 
-  override def onInventoryChanged() {
-    super.onInventoryChanged()
+  override def markDirty() {
+    super.markDirty()
     updateInventorySize()
     updateMaxComponentCount()
     renderingErrored = false
@@ -618,7 +619,7 @@ class Robot extends traits.Computer with traits.PowerInformation with api.machin
   }
 
   override def isUseableByPlayer(player: EntityPlayer) =
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case t: RobotProxy if t == proxy && computer.canInteract(player.getCommandSenderName) =>
         player.getDistanceSq(x + 0.5, y + 0.5, z + 0.5) <= 64
       case _ => false

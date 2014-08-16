@@ -13,7 +13,8 @@ import li.cil.oc.util.mods.{Mods, Waila}
 import li.cil.oc.{Localization, Settings}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.{NBTTagCompound, NBTTagString}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 import stargatetech2.api.bus.IBusDevice
 
 import scala.collection.mutable
@@ -48,7 +49,7 @@ trait Computer extends Environment with ComponentInventory with Rotatable with B
   @SideOnly(Side.CLIENT)
   def setRunning(value: Boolean) = {
     _isRunning = value
-    world.markBlockForRenderUpdate(x, y, z)
+    world.markBlockForUpdate(x, y, z)
     if (_isRunning) Sound.startLoop(this, "computer_running", 0.5f, 50 + world.rand.nextInt(50))
     else Sound.stopLoop(this)
     this
@@ -156,20 +157,20 @@ trait Computer extends Environment with ComponentInventory with Rotatable with B
     super.readFromNBTForClient(nbt)
     _isRunning = nbt.getBoolean("isRunning")
     _users.clear()
-    _users ++= nbt.getTagList("users").iterator[NBTTagString].map(_.data)
+    _users ++= nbt.getTagList("users", NBT.TAG_STRING).map((list, index) => list.getStringTagAt(index))
     if (_isRunning) Sound.startLoop(this, "computer_running", 0.5f, 1000 + world.rand.nextInt(2000))
   }
 
   override def writeToNBTForClient(nbt: NBTTagCompound) {
     super.writeToNBTForClient(nbt)
     nbt.setBoolean("isRunning", isRunning)
-    nbt.setNewTagList("users", computer.users.map(user => new NBTTagString(null, user)))
+    nbt.setNewTagList("users", computer.users.map(user => new NBTTagString(user)))
   }
 
   // ----------------------------------------------------------------------- //
 
-  override def onInventoryChanged() {
-    super.onInventoryChanged()
+  override def markDirty() {
+    super.markDirty()
     if (isServer) {
       computer.architecture.recomputeMemory()
       isOutputEnabled = hasRedstoneCard
@@ -192,13 +193,13 @@ trait Computer extends Environment with ComponentInventory with Rotatable with B
   override def onAnalyze(player: EntityPlayer, side: Int, hitX: Float, hitY: Float, hitZ: Float) = {
     computer.lastError match {
       case value if value != null =>
-        player.sendChatToPlayer(Localization.Analyzer.LastError(value))
+        player.addChatMessage(Localization.Analyzer.LastError(value))
       case _ =>
     }
-    player.sendChatToPlayer(Localization.Analyzer.Components(computer.componentCount, maxComponents))
+    player.addChatMessage(Localization.Analyzer.Components(computer.componentCount, maxComponents))
     val list = users
     if (list.size > 0) {
-      player.sendChatToPlayer(Localization.Analyzer.Users(list))
+      player.addChatMessage(Localization.Analyzer.Users(list))
     }
     Array(computer.node)
   }

@@ -5,7 +5,7 @@ import li.cil.oc.common.Tier
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
-import net.minecraft.util.Icon
+import net.minecraft.util.IIcon
 
 import scala.collection.convert.WrapAsScala._
 
@@ -16,7 +16,7 @@ trait ComponentSlot extends Slot {
 
   def tier: Int
 
-  def tierIcon: Icon
+  def tierIcon: IIcon
 
   // ----------------------------------------------------------------------- //
 

@@ -5,7 +5,7 @@ import li.cil.oc.common.{GuiType, tileentity}
 import li.cil.oc.{OpenComputers, Settings}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Switch(val parent: SimpleDelegator) extends SimpleDelegate {
   override protected def customTextures = Array(
@@ -30,7 +30,7 @@ class Switch(val parent: SimpleDelegator) extends SimpleDelegate {
 
   override def rightClick(world: World, x: Int, y: Int, z: Int, player: EntityPlayer,
                           side: ForgeDirection, hitX: Float, hitY: Float, hitZ: Float) = {
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case switch: tileentity.Switch =>
         if (!player.isSneaking) {
           if (!world.isRemote) {

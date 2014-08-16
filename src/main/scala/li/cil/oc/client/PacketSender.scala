@@ -5,7 +5,9 @@ import li.cil.oc.common.tileentity._
 import li.cil.oc.common.tileentity.traits.Computer
 import li.cil.oc.common.{CompressedPacketBuilder, PacketBuilder, PacketType}
 import net.minecraft.client.Minecraft
-import net.minecraftforge.common.ForgeDirection
+import net.minecraft.client.audio.PositionedSoundRecord
+import net.minecraft.util.ResourceLocation
+import net.minecraftforge.common.util.ForgeDirection
 
 object PacketSender {
   // Timestamp after which the next clipboard message may be sent. Used to
@@ -44,7 +46,9 @@ object PacketSender {
   def sendClipboard(address: String, value: String) {
     if (value != null && !value.isEmpty) {
       if (value.length > 64 * 1024 || System.currentTimeMillis() < clipboardCooldown) {
-        Minecraft.getMinecraft.sndManager.playSoundFX("note.harp", 3, 1)
+        val player = Minecraft.getMinecraft.thePlayer
+        val handler = Minecraft.getMinecraft.getSoundHandler
+        handler.playSound(new PositionedSoundRecord(new ResourceLocation("note.harp"), 1, 1, player.posX.toFloat, player.posY.toFloat, player.posZ.toFloat))
       }
       else {
         clipboardCooldown = System.currentTimeMillis() + value.length / 10

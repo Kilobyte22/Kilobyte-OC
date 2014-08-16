@@ -4,7 +4,7 @@ import cpw.mods.fml.common.Optional
 import li.cil.oc.Settings
 import li.cil.oc.common.EventHandler
 import li.cil.oc.util.mods.Mods
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait IndustrialCraft2Experimental extends Common with IndustrialCraft2Common {
   private var lastInjectedAmount = 0.0
@@ -31,10 +31,13 @@ trait IndustrialCraft2Experimental extends Common with IndustrialCraft2Common {
   // ----------------------------------------------------------------------- //
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2)
+  def getSinkTier = Int.MaxValue
+
+  @Optional.Method(modid = Mods.IDs.IndustrialCraft2)
   def acceptsEnergyFrom(emitter: net.minecraft.tileentity.TileEntity, direction: ForgeDirection) = Mods.IndustrialCraft2.isAvailable && canConnectPower(direction)
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2)
-  def injectEnergyUnits(directionFrom: ForgeDirection, amount: Double): Double = {
+  def injectEnergy(directionFrom: ForgeDirection, amount: Double, voltage: Double): Double = {
     lastInjectedAmount = amount
     var energy = amount * Settings.ratioIndustrialCraft2
     // Work around IC2 being uncooperative and always just passing 'unknown' along here.
@@ -48,7 +51,7 @@ trait IndustrialCraft2Experimental extends Common with IndustrialCraft2Common {
   }
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2)
-  def demandedEnergyUnits = {
+  def getDemandedEnergy = {
     if (!useIndustrialCraft2Power) 0
     else {
       var force = false

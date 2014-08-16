@@ -20,7 +20,7 @@ object ItemRenderer extends IItemRenderer {
   val renderItem = new RenderItem()
   renderItem.setRenderManager(RenderManager.instance)
 
-  val bounds = AxisAlignedBB.getBoundingBox(-0.1, -0.1, -0.1, 0.1, 0.1, 0.1)
+  def bounds = AxisAlignedBB.getBoundingBox(-0.1, -0.1, -0.1, 0.1, 0.1, 0.1)
 
   def isUpgrade(descriptor: ItemInfo) =
     descriptor == api.Items.get("craftingUpgrade") ||
@@ -76,7 +76,7 @@ object ItemRenderer extends IItemRenderer {
 
     else if (isFloppy(descriptor)) {
       renderItem.renderItemIntoGUI(null, tm, stack, 0, 0)
-      val res = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight)
+      val res = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight)
       val fontRenderer = renderItem.getFontRendererFromRenderManager
       if (fontRenderer != null && res.getScaleFactor > 1) {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS)
@@ -89,7 +89,7 @@ object ItemRenderer extends IItemRenderer {
             stack.getTagCompound.getCompoundTag(Settings.namespace + "data").getString(Settings.namespace + "fs.label")
           }
           else "disk"
-        val lines = fontRenderer.listFormattedStringToWidth(EnumChatFormatting.func_110646_a(label), maxLength).take(math.max(1, res.getScaleFactor / 2))
+        val lines = fontRenderer.listFormattedStringToWidth(EnumChatFormatting.getTextWithoutFormattingCodes(label), maxLength).take(math.max(1, res.getScaleFactor / 2))
         for (line <- lines) {
           fontRenderer.drawString(line.asInstanceOf[String], 0, 0, 0)
           GL11.glTranslatef(0, fontRenderer.FONT_HEIGHT, 0)

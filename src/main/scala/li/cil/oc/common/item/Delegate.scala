@@ -14,8 +14,8 @@ import net.minecraft.world.World
 import org.lwjgl.input
 
 trait Delegate {
-  type Icon = net.minecraft.util.Icon
-  type IconRegister = net.minecraft.client.renderer.texture.IconRegister
+  type Icon = net.minecraft.util.IIcon
+  type IconRegister = net.minecraft.client.renderer.texture.IIconRegister
 
   val parent: Delegator
 
@@ -89,7 +89,7 @@ trait Delegate {
       else {
         tooltip.add(StatCollector.translateToLocalFormatted(
           Settings.namespace + "tooltip.MaterialCosts",
-          input.Keyboard.getKeyName(KeyBindings.materialCosts.keyCode)))
+          input.Keyboard.getKeyName(KeyBindings.materialCosts.getKeyCode)))
       }
     }
     if (stack.hasTagCompound && stack.getTagCompound.hasKey(Settings.namespace + "data")) {

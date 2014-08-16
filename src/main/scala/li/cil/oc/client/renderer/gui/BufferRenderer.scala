@@ -23,6 +23,7 @@ object BufferRenderer {
     displayLists = GLAllocation.generateDisplayLists(2)
 
     RenderState.checkError(getClass.getName + ".displayLists: leaving")
+    Textures.init(tm)
   })
 
   def compileBackground(bufferWidth: Int, bufferHeight: Int, forRobot: Boolean = false) =

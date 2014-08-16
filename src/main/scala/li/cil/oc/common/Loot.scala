@@ -2,8 +2,8 @@ package li.cil.oc.common
 
 import java.io
 import java.util.Random
-import java.util.logging.Level
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.common.recipe.Recipes
 import li.cil.oc.util.Color
 import li.cil.oc.{OpenComputers, Settings, api}
@@ -12,7 +12,6 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.WeightedRandomChestContent
 import net.minecraftforge.common.{ChestGenHooks, DimensionManager}
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.WorldEvent
 
 import scala.collection.convert.WrapAsScala._
@@ -47,7 +46,7 @@ object Loot extends WeightedRandomChestContent(api.Items.get("openOS").createIte
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def initForWorld(e: WorldEvent.Load) {
     worldDisks.clear()
     disks.clear()
@@ -63,7 +62,7 @@ object Loot extends WeightedRandomChestContent(api.Items.get("openOS").createIte
           parseLootDisks(list, worldDisks)
         }
         catch {
-          case t: Throwable => OpenComputers.log.warning("Failed opening loot descriptor file in saves folder.")
+          case t: Throwable => OpenComputers.log.warn("Failed opening loot descriptor file in saves folder.")
         }
       }
     }
@@ -89,7 +88,7 @@ object Loot extends WeightedRandomChestContent(api.Items.get("openOS").createIte
           acc += key -> ((createLootDisk(value, key), 1))
       }
       catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Bad loot descriptor: " + value, t)
+        case t: Throwable => OpenComputers.log.warn("Bad loot descriptor: " + value, t)
       }
     }
   }
@@ -98,7 +97,7 @@ object Loot extends WeightedRandomChestContent(api.Items.get("openOS").createIte
     val data = new NBTTagCompound()
     data.setString(Settings.namespace + "fs.label", name)
 
-    val tag = new NBTTagCompound("tag")
+    val tag = new NBTTagCompound()
     tag.setTag(Settings.namespace + "data", data)
     // Store this top level, so it won't get wiped on save.
     tag.setString(Settings.namespace + "lootPath", path)

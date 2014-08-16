@@ -8,8 +8,8 @@ import li.cil.oc.util.mods.Mods
 import li.cil.oc.{Localization, Settings}
 import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
+import net.minecraftforge.common.util.Constants.NBT
 
 class AccessPoint(parent: SimpleDelegator) extends Switch(parent) {
   override protected def customTextures = Array(
@@ -24,12 +24,12 @@ class AccessPoint(parent: SimpleDelegator) extends Switch(parent) {
   @Optional.Method(modid = Mods.IDs.Waila)
   override def wailaBody(stack: ItemStack, tooltip: util.List[String], accessor: IWailaDataAccessor, config: IWailaConfigHandler) {
     val nbt = accessor.getNBTData
-    val node = nbt.getTagList(Settings.namespace + "componentNodes").tagAt(accessor.getSide.ordinal).asInstanceOf[NBTTagCompound]
+    val node = nbt.getTagList(Settings.namespace + "componentNodes", NBT.TAG_COMPOUND).getCompoundTagAt(accessor.getSide.ordinal)
     if (node.hasKey("address")) {
       tooltip.add(Localization.Analyzer.Address(node.getString("address")).toString)
     }
     if (nbt.hasKey(Settings.namespace + "strength")) {
-      tooltip.add(Localization.Analyzer.WirelessStrength(nbt.getDouble(Settings.namespace + "strength")).toString)
+      tooltip.add(Localization.Analyzer.WirelessStrength(nbt.getDouble(Settings.namespace + "strength")).getUnformattedTextForChat)
     }
   }
 

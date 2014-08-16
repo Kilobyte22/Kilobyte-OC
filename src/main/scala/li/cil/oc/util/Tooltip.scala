@@ -18,7 +18,7 @@ object Tooltip {
     val shouldShorten = (isSubTooltip || font.getStringWidth(tooltip) > maxWidth) && !KeyBindings.showExtendedTooltips
     if (shouldShorten) {
       if (isSubTooltip) Seq.empty[String]
-      else Seq(Localization.localizeImmediately("tooltip.TooLong", Keyboard.getKeyName(KeyBindings.extendedTooltip.keyCode)))
+      else Seq(Localization.localizeImmediately("tooltip.TooLong", Keyboard.getKeyName(KeyBindings.extendedTooltip.getKeyCode)))
     }
     else {
       val nl = """\[nl\]"""

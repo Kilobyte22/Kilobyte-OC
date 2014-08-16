@@ -1,33 +1,31 @@
 package li.cil.oc.common
 
-import java.io.{ByteArrayInputStream, DataInputStream, InputStream}
-import java.util.logging.Level
+import java.io.{DataInputStream, InputStream}
 import java.util.zip.GZIPInputStream
 
-import cpw.mods.fml.common.network.{IPacketHandler, Player}
+import io.netty.buffer.{ByteBuf, ByteBufInputStream}
 import li.cil.oc.{Blocks, OpenComputers}
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.CompressedStreamTools
-import net.minecraft.network.INetworkManager
-import net.minecraft.network.packet.Packet250CustomPayload
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.reflect.{ClassTag, classTag}
 
-abstract class PacketHandler extends IPacketHandler {
+abstract class PacketHandler {
   /** Top level dispatcher based on packet type. */
-  def onPacketData(manager: INetworkManager, packet: Packet250CustomPayload, player: Player) {
+  protected def onPacketData(data: ByteBuf, player: EntityPlayer) {
     // Don't crash on badly formatted packets (may have been altered by a
     // malicious client, in which case we don't want to allow it to kill the
     // server like this). Just spam the log a bit... ;)
     try {
-      val stream = new ByteArrayInputStream(packet.data)
+      val stream = new ByteBufInputStream(data)
       if (stream.read() == 0) dispatch(new PacketParser(stream, player))
       else dispatch(new PacketParser(new GZIPInputStream(stream), player))
     } catch {
       case e: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Received a badly formatted packet.", e)
+        OpenComputers.log.warn("Received a badly formatted packet.", e)
     }
   }
 
@@ -38,18 +36,18 @@ abstract class PacketHandler extends IPacketHandler {
    * dimension; None otherwise. For the server it returns the world for the
    * specified dimension, if such a dimension exists; None otherwise.
    */
-  protected def world(player: Player, dimension: Int): Option[World]
+  protected def world(player: EntityPlayer, dimension: Int): Option[World]
 
   protected def dispatch(p: PacketParser)
 
-  protected class PacketParser(stream: InputStream, val player: Player) extends DataInputStream(stream) {
+  protected class PacketParser(stream: InputStream, val player: EntityPlayer) extends DataInputStream(stream) {
     val packetType = PacketType(readByte())
 
     def getTileEntity[T: ClassTag](dimension: Int, x: Int, y: Int, z: Int): Option[T] = {
       world(player, dimension) match {
         case None => // Invalid dimension.
         case Some(world) =>
-          val t = world.getBlockTileEntity(x, y, z)
+          val t = world.getTileEntity(x, y, z)
           if (t != null && classTag[T].runtimeClass.isAssignableFrom(t.getClass)) {
             return Some(t.asInstanceOf[T])
           }

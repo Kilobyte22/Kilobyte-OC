@@ -42,7 +42,7 @@ class Terminal(val parent: Delegator) extends Delegate {
   }
 
   override def onItemUse(stack: ItemStack, player: EntityPlayer, world: World, x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float, hitZ: Float) = {
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case rack: tileentity.ServerRack if side == rack.facing.ordinal() =>
         val l = 2 / 16.0
         val h = 14 / 16.0
@@ -55,7 +55,7 @@ class Terminal(val parent: Delegator) extends Delegate {
                 val key = UUID.randomUUID().toString
                 val keys = terminal.keys
                 if (!stack.hasTagCompound) {
-                  stack.setTagCompound(new NBTTagCompound("tag"))
+                  stack.setTagCompound(new NBTTagCompound())
                 }
                 else {
                   keys -= stack.getTagCompound.getString(Settings.namespace + "key")
@@ -69,7 +69,7 @@ class Terminal(val parent: Delegator) extends Delegate {
                 ServerPacketSender.sendServerState(rack, slot)
                 stack.getTagCompound.setString(Settings.namespace + "key", key)
                 stack.getTagCompound.setString(Settings.namespace + "server", server.machine.node.address)
-                player.inventory.onInventoryChanged()
+                player.inventory.markDirty()
               case _ => // Huh?
             }
           }

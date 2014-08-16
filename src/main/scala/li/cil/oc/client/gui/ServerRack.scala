@@ -9,7 +9,7 @@ import net.minecraft.client.gui.{GuiButton, GuiScreen}
 import net.minecraft.client.renderer.Tessellator
 import net.minecraft.entity.player.InventoryPlayer
 import net.minecraft.util.StatCollector
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 import org.lwjgl.opengl.GL11
 
 class ServerRack(playerInventory: InventoryPlayer, val rack: tileentity.ServerRack) extends DynamicGuiContainer(new container.ServerRack(playerInventory, rack)) {
@@ -95,12 +95,12 @@ class ServerRack(playerInventory: InventoryPlayer, val rack: tileentity.ServerRa
     super.drawGuiContainerForegroundLayer(mouseX, mouseY)
     GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS) // Prevents NEI render glitch.
 
-    fontRenderer.drawString(
-      StatCollector.translateToLocal(rack.getInvName),
+    fontRendererObj.drawString(
+      StatCollector.translateToLocal(rack.getInventoryName),
       8, 6, 0x404040)
 
     val rangeY = 39
-    fontRenderer.drawString(Localization.ServerRack.WirelessRange, 8, rangeY, 0x404040)
+    fontRendererObj.drawString(Localization.ServerRack.WirelessRange, 8, rangeY, 0x404040)
 
     {
       // Background for range value.
@@ -121,14 +121,14 @@ class ServerRack(playerInventory: InventoryPlayer, val rack: tileentity.ServerRa
       GL11.glDepthMask(true)
     }
 
-    drawCenteredString(fontRenderer,
+    drawCenteredString(fontRendererObj,
       rack.range.toString,
       40, 56, 0xFFFFFF)
 
-    for (i <- 0 to 3 if powerButtons(i).func_82252_a) {
+    for (i <- 0 to 3 if powerButtons(i).func_146115_a) {
       val tooltip = new java.util.ArrayList[String]
       tooltip.add(if (rack.isRunning(i)) Localization.Robot.TurnOff else Localization.Robot.TurnOn)
-      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
     }
 
     GL11.glPopAttrib()

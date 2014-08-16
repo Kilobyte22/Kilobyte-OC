@@ -1,6 +1,6 @@
 package li.cil.oc.server.component
 
-import cpw.mods.fml.common.registry.GameRegistry
+import cpw.mods.fml.common.FMLCommonHandler
 import li.cil.oc.api.Network
 import li.cil.oc.api.driver.Container
 import li.cil.oc.api.machine.Robot
@@ -39,15 +39,15 @@ class UpgradeCrafting(val owner: Container with Robot) extends component.Managed
       val targetStackSize = if (result.isStackable) math.min(wantedCount, result.getMaxStackSize) else result.stackSize
       val timesCrafted = math.min(targetStackSize / result.stackSize, amountPossible)
       if (timesCrafted <= 0) return true
-      GameRegistry.onItemCrafted(owner.player, result, this)
+      FMLCommonHandler.instance.firePlayerCraftingEvent(owner.player, result, this)
       val surplus = mutable.ArrayBuffer.empty[ItemStack]
       for (slot <- 0 until getSizeInventory) {
         val stack = getStackInSlot(slot)
         if (stack != null) {
           decrStackSize(slot, timesCrafted)
           val item = stack.getItem
-          if (item.hasContainerItem) {
-            val container = item.getContainerItemStack(stack)
+          if (item.hasContainerItem(stack)) {
+            val container = item.getContainerItem(stack)
             if (container.isItemStackDamageable && container.getItemDamage > container.getMaxDamage) {
               MinecraftForge.EVENT_BUS.post(new PlayerDestroyItemEvent(owner.player, container))
             }

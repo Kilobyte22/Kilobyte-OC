@@ -7,7 +7,8 @@ import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.MovingAverage
 import li.cil.oc.{Settings, api}
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.mutable
 
@@ -96,14 +97,16 @@ trait Hub extends traits.Environment with SidedEnvironment {
 
   override def readFromNBT(nbt: NBTTagCompound) {
     super.readFromNBT(nbt)
-    nbt.getTagList(Settings.namespace + "plugs").iterator[NBTTagCompound].zip(plugs).foreach {
-      case (plugNbt, plug) => plug.node.load(plugNbt)
+    nbt.getTagList(Settings.namespace + "plugs", NBT.TAG_COMPOUND).foreach {
+      case (list, index) => plugs(index).node.load(list.getCompoundTagAt(index))
     }
-    nbt.getTagList(Settings.namespace + "queue").foreach[NBTTagCompound](tag => {
-      val side = ForgeDirection.getOrientation(tag.getInteger("side"))
-      val packet = api.Network.newPacket(tag)
-      queue += side -> packet
-    })
+    nbt.getTagList(Settings.namespace + "queue", NBT.TAG_COMPOUND).foreach {
+      case (list, index) =>
+        val tag = list.getCompoundTagAt(index)
+        val side = ForgeDirection.getOrientation(tag.getInteger("side"))
+        val packet = api.Network.newPacket(tag)
+        queue += side -> packet
+    }
     if (nbt.hasKey(Settings.namespace + "relayCooldown")) {
       relayCooldown = nbt.getInteger(Settings.namespace + "relayCooldown")
     }

@@ -7,7 +7,8 @@ import li.cil.oc.common.{item, tileentity}
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.{Items, Settings, api}
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.nbt.{NBTTagCompound, NBTTagString}
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraftforge.common.util.Constants.NBT
 
 import scala.collection.mutable
 
@@ -60,7 +61,7 @@ class Terminal(val rack: tileentity.ServerRack, val number: Int) {
     if (nbt.hasKey(Settings.namespace + "key")) {
       keys += nbt.getString(Settings.namespace + "key")
     }
-    nbt.getTagList(Settings.namespace + "keys").foreach[NBTTagString](keys += _.data)
+    nbt.getTagList(Settings.namespace + "keys", NBT.TAG_STRING).foreach((list, index) => keys += list.getStringTagAt(index))
   }
 
   def save(nbt: NBTTagCompound) {
@@ -72,7 +73,7 @@ class Terminal(val rack: tileentity.ServerRack, val number: Int) {
   @SideOnly(Side.CLIENT)
   def readFromNBTForClient(nbt: NBTTagCompound) {
     buffer.load(nbt)
-    nbt.getTagList("keys").foreach[NBTTagString](keys += _.data)
+    nbt.getTagList("keys", NBT.TAG_STRING).foreach((list, index) => keys += list.getStringTagAt(index))
   }
 
   def writeToNBTForClient(nbt: NBTTagCompound) {

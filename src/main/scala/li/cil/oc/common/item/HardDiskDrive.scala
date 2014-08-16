@@ -33,7 +33,7 @@ class HardDiskDrive(val parent: Delegator, val tier: Int) extends Delegate with 
   }
 
   override def displayName(stack: ItemStack) = {
-    val localizedName = parent.getItemStackDisplayName(stack)
+    val localizedName = parent.internalGetItemStackDisplayName(stack)
     Some(if (kiloBytes >= 1024) {
       localizedName + " (%dMB)".format(kiloBytes / 1024)
     }

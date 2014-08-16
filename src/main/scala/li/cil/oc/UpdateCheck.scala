@@ -2,7 +2,6 @@ package li.cil.oc
 
 import java.io.InputStreamReader
 import java.net.URL
-import java.util.logging.Level
 
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
@@ -46,7 +45,7 @@ object UpdateCheck {
         OpenComputers.log.info("Running the latest OpenComputers version.")
       }
       catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Update check for OpenComputers failed.", t)
+        case t: Throwable => OpenComputers.log.warn("Update check for OpenComputers failed.", t)
       }
     }
     None

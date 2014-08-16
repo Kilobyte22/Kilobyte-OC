@@ -4,7 +4,7 @@ import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.Settings
 import li.cil.oc.api.network.Connector
 import li.cil.oc.common.tileentity.traits.TileEntity
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait Common extends TileEntity {
   @SideOnly(Side.CLIENT)

@@ -47,4 +47,5 @@ object Loot extends Item {
       }
     }
   }
+
 }

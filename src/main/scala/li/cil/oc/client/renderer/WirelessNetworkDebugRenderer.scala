@@ -1,22 +1,25 @@
 package li.cil.oc.client.renderer
 
+import cpw.mods.fml.common.ObfuscationReflectionHelper
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.Settings
 import li.cil.oc.server.network.WirelessNetwork
 import li.cil.oc.util.RenderState
 import net.minecraft.client.Minecraft
+import net.minecraft.world.World
 import net.minecraftforge.client.event.RenderWorldLastEvent
-import net.minecraftforge.event.ForgeSubscribe
 import org.lwjgl.opengl.GL11
 
 object WirelessNetworkDebugRenderer {
   val colors = Array(0xFF0000, 0x00FFFF, 0x00FF00, 0x0000FF, 0xFF00FF, 0xFFFF00, 0xFFFFFF, 0x000000)
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRenderWorldLastEvent(e: RenderWorldLastEvent) {
     if (Settings.rTreeDebugRenderer) {
       RenderState.checkError(getClass.getName + ".onRenderWorldLastEvent: entering (aka: wasntme)")
 
-      WirelessNetwork.dimensions.get(e.context.theWorld.provider.dimensionId) match {
+      val world = ObfuscationReflectionHelper.getPrivateValue(classOf[net.minecraft.client.renderer.RenderGlobal], e.context, "theWorld", "field_72769_h", "r").asInstanceOf[World]
+      WirelessNetwork.dimensions.get(world.provider.dimensionId) match {
         case Some(tree) =>
           val mc = Minecraft.getMinecraft
           val player = mc.thePlayer

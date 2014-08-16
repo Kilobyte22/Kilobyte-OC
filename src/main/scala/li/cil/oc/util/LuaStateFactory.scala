@@ -2,7 +2,6 @@ package li.cil.oc.util
 
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.channels.Channels
-import java.util.logging.Level
 
 import com.naef.jnlua
 import com.naef.jnlua.LuaState
@@ -60,12 +59,12 @@ object LuaStateFactory {
   def init() {
     if (isWindows && !Settings.get.alwaysTryNative) {
       if (SystemUtils.IS_OS_WINDOWS_XP) {
-        OpenComputers.log.warning("Sorry, but Windows XP isn't supported. I'm afraid you'll have to use a newer Windows. I very much recommend upgrading your Windows, anyway, since Microsoft has stopped supporting Windows XP in April 2014.")
+        OpenComputers.log.warn("Sorry, but Windows XP isn't supported. I'm afraid you'll have to use a newer Windows. I very much recommend upgrading your Windows, anyway, since Microsoft has stopped supporting Windows XP in April 2014.")
         return
       }
 
       if (SystemUtils.IS_OS_WINDOWS_2003) {
-        OpenComputers.log.warning("Sorry, but Windows Server 2003 isn't supported. I'm afraid you'll have to use a newer Windows.")
+        OpenComputers.log.warn("Sorry, but Windows Server 2003 isn't supported. I'm afraid you'll have to use a newer Windows.")
         return
       }
     }
@@ -94,7 +93,7 @@ object LuaStateFactory {
 
     // Try to find a working lib.
     for (library <- libNames if !haveNativeLibrary) {
-      OpenComputers.log.fine(s"Trying native library '$library'...")
+      OpenComputers.log.trace(s"Trying native library '$library'...")
       val libraryUrl = classOf[Machine].getResource(libPath + library)
       if (libraryUrl != null) {
         // Create a temporary file.
@@ -137,7 +136,7 @@ object LuaStateFactory {
               case t: Throwable => // Ignore.
             }
             if (file.exists()) {
-              OpenComputers.log.severe(s"Could not update native library '${file.getName}'!")
+              OpenComputers.log.warn(s"Could not update native library '${file.getName}'!")
             }
           }
         }
@@ -180,14 +179,14 @@ object LuaStateFactory {
         }
         catch {
           case _: Throwable =>
-            OpenComputers.log.log(Level.FINE, s"Could not load native library '${file.getName}'.")
+            OpenComputers.log.trace(s"Could not load native library '${file.getName}'.")
             file.delete()
         }
       }
     }
 
     if (!haveNativeLibrary) {
-      OpenComputers.log.warning("Unsupported platform, you won't be able to host games with persistent computers.")
+      OpenComputers.log.warn("Unsupported platform, you won't be able to host games with persistent computers.")
     }
   }
 
@@ -299,15 +298,15 @@ object LuaStateFactory {
       }
       catch {
         case t: Throwable =>
-          OpenComputers.log.log(Level.WARNING, "Failed creating Lua state.", t)
+          OpenComputers.log.warn("Failed creating Lua state.", t)
           state.close()
       }
     }
     catch {
       case _: UnsatisfiedLinkError =>
-        OpenComputers.log.severe("Failed loading the native libraries.")
+        OpenComputers.log.error("Failed loading the native libraries.")
       case t: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Failed creating Lua state.", t)
+        OpenComputers.log.warn("Failed creating Lua state.", t)
     }
     None
   }

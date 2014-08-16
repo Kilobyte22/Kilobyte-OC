@@ -6,7 +6,8 @@ import li.cil.oc.util.mods.Mods
 import li.cil.oc.{Localization, Settings, api}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.convert.WrapAsScala._
 
@@ -18,7 +19,7 @@ class AccessPoint extends Switch with WirelessEndpoint {
   // ----------------------------------------------------------------------- //
 
   override def onAnalyze(player: EntityPlayer, side: Int, hitX: Float, hitY: Float, hitZ: Float): Array[Node] = {
-    player.sendChatToPlayer(Localization.Analyzer.WirelessStrength(strength))
+    player.addChatMessage(Localization.Analyzer.WirelessStrength(strength))
     Array(componentNodes(side))
   }
 
@@ -85,8 +86,8 @@ class AccessPoint extends Switch with WirelessEndpoint {
     if (nbt.hasKey(Settings.namespace + "strength")) {
       strength = nbt.getDouble(Settings.namespace + "strength") max 0 min Settings.get.maxWirelessRange
     }
-    nbt.getTagList(Settings.namespace + "componentNodes").iterator[NBTTagCompound].zipWithIndex.foreach {
-      case (tag, index) => componentNodes(index).load(tag)
+    nbt.getTagList(Settings.namespace + "componentNodes", NBT.TAG_COMPOUND).foreach {
+      case (list, index) => componentNodes(index).load(list.getCompoundTagAt(index))
     }
   }
 

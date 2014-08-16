@@ -5,7 +5,7 @@ import li.cil.oc.common.{GuiType, tileentity}
 import li.cil.oc.{OpenComputers, Settings}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class RobotAssembler(val parent: SpecialDelegator) extends SpecialDelegate {
   override protected def customTextures = Array(

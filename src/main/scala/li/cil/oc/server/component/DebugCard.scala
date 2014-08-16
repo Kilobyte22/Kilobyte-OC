@@ -5,6 +5,7 @@ import li.cil.oc.api.driver.Container
 import li.cil.oc.api.network.{Arguments, Callback, Context, Visibility}
 import li.cil.oc.api.prefab.AbstractValue
 import li.cil.oc.common.component
+import net.minecraft.block.Block
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
 import net.minecraftforge.common.DimensionManager
@@ -98,7 +99,7 @@ object DebugCard {
 
     @Callback(doc = """function(x:number, y:number, z:number):number -- Get the ID of the block at the specified coordinates.""")
     def getBlockId(context: Context, args: Arguments): Array[AnyRef] =
-      result(world.getBlockId(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2)))
+      result(Block.getIdFromBlock(world.getBlock(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2))))
 
     @Callback(doc = """function(x:number, y:number, z:number):number -- Get the metadata of the block at the specified coordinates.""")
     def getMetadata(context: Context, args: Arguments): Array[AnyRef] =
@@ -109,8 +110,11 @@ object DebugCard {
       result(world.blockExists(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2)))
 
     @Callback(doc = """function(x:number, y:number, z:number):number -- Check whether the block at the specified coordinates has a tile entity.""")
-    def hasTileEntity(context: Context, args: Arguments): Array[AnyRef] =
-      result(world.blockHasTileEntity(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2)))
+    def hasTileEntity(context: Context, args: Arguments): Array[AnyRef] = {
+      val (x, y, z) = (args.checkInteger(0), args.checkInteger(1), args.checkInteger(2))
+      val block = world.getBlock(x, y, z)
+      result(block != null && block.hasTileEntity(world.getBlockMetadata(x, y, z)))
+    }
 
     @Callback(doc = """function(x:number, y:number, z:number):number -- Get the light opacity of the block at the specified coordinates.""")
     def getLightOpacity(context: Context, args: Arguments): Array[AnyRef] =
@@ -126,17 +130,17 @@ object DebugCard {
 
     @Callback(doc = """function(x:number, y:number, z:number, id:number, meta:number):number -- Set the block at the specified coordinates.""")
     def setBlock(context: Context, args: Arguments): Array[AnyRef] =
-      result(world.setBlock(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2), args.checkInteger(3), args.checkInteger(4), 3))
+      result(world.setBlock(args.checkInteger(0), args.checkInteger(1), args.checkInteger(2), Block.getBlockById(args.checkInteger(3)), args.checkInteger(4), 3))
 
     @Callback(doc = """function(x1:number, y1:number, z1:number, x2:number, y2:number, z2:number, id:number, meta:number):number -- Set all blocks in the area defined by the two corner points (x1, y1, z1) and (x2, y2, z2).""")
     def setBlocks(context: Context, args: Arguments): Array[AnyRef] = {
       val (xMin, yMin, zMin) = (args.checkInteger(0), args.checkInteger(1), args.checkInteger(2))
       val (xMax, yMax, zMax) = (args.checkInteger(3), args.checkInteger(4), args.checkInteger(5))
-      val (blockId, metadata) = (args.checkInteger(6), args.checkInteger(7))
+      val (block, metadata) = (Block.getBlockById(args.checkInteger(6)), args.checkInteger(7))
       for (x <- math.min(xMin, xMax) to math.max(xMin, xMax)) {
         for (y <- math.min(yMin, yMax) to math.max(yMin, yMax)) {
           for (z <- math.min(zMin, zMax) to math.max(zMin, zMax)) {
-            world.setBlock(x, y, z, blockId, metadata, 3)
+            world.setBlock(x, y, z, block, metadata, 3)
           }
         }
       }

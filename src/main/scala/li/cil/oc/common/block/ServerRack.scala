@@ -6,7 +6,7 @@ import li.cil.oc.client.Textures
 import li.cil.oc.common.{GuiType, tileentity}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class ServerRack(val parent: SpecialDelegator) extends RedstoneAware with SpecialDelegate {
   override protected def customTextures = Array(
@@ -25,7 +25,7 @@ class ServerRack(val parent: SpecialDelegator) extends RedstoneAware with Specia
 
   @SideOnly(Side.CLIENT)
   override def mixedBrightness(world: IBlockAccess, x: Int, y: Int, z: Int) = {
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case rack: tileentity.ServerRack =>
         def brightness(x: Int, y: Int, z: Int) = world.getLightBrightnessForSkyBlocks(x, y, z, parent.getLightValue(world, x, y, z))
         val value = brightness(x + rack.facing.offsetX, y + rack.facing.offsetY, z + rack.facing.offsetZ)

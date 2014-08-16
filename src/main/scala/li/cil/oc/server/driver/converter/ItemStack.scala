@@ -4,6 +4,7 @@ import java.util
 
 import li.cil.oc.api
 import net.minecraft.item
+import net.minecraft.item.Item
 
 import scala.collection.convert.WrapAsScala._
 
@@ -11,7 +12,7 @@ object ItemStack extends api.driver.Converter {
   override def convert(value: AnyRef, output: util.Map[AnyRef, AnyRef]) =
     value match {
       case stack: item.ItemStack =>
-        output += "id" -> Int.box(stack.itemID)
+        output += "id" -> Int.box(Item.getIdFromItem(stack.getItem))
         output += "damage" -> Int.box(stack.getItemDamage)
         output += "maxDamage" -> Int.box(stack.getMaxDamage)
         output += "size" -> Int.box(stack.stackSize)

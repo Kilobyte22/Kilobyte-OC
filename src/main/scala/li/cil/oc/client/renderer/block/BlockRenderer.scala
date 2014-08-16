@@ -1,6 +1,7 @@
 package li.cil.oc.client.renderer.block
 
 import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
+import cpw.mods.fml.common.Loader
 import li.cil.oc.Settings
 import li.cil.oc.client.Textures
 import li.cil.oc.client.renderer.tileentity.RobotRenderer
@@ -9,15 +10,15 @@ import li.cil.oc.common.tileentity
 import li.cil.oc.util.RenderState
 import net.minecraft.block.Block
 import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
-import net.minecraft.util.AxisAlignedBB
+import net.minecraft.util.{AxisAlignedBB, IIcon}
 import net.minecraft.world.IBlockAccess
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 import org.lwjgl.opengl.GL11
 
 object BlockRenderer extends ISimpleBlockRenderingHandler {
   def getRenderId = Settings.blockRenderId
 
-  override def shouldRender3DInInventory() = true
+  override def shouldRender3DInInventory(modelID: Int) = true
 
   override def renderInventoryBlock(block: Block, metadata: Int, modelID: Int, renderer: RenderBlocks) {
     RenderState.checkError(getClass.getName + ".renderInventoryBlock: entering (aka: wasntme)")
@@ -57,6 +58,9 @@ object BlockRenderer extends ISimpleBlockRenderingHandler {
           case delegator: Delegator[_] =>
             delegator.setBlockBoundsForItemRender(metadata)
             delegator.preItemRender(metadata)
+          case simple: SimpleBlock =>
+            simple.setBlockBoundsForItemRender(metadata)
+            simple.preItemRender(metadata)
           case _ => block.setBlockBoundsForItemRender()
         }
         renderer.setRenderBoundsFromBlock(block)
@@ -77,10 +81,11 @@ object BlockRenderer extends ISimpleBlockRenderingHandler {
     RenderState.checkError(getClass.getName + ".renderInventoryBlock: leaving")
   }
 
-  override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) = {
+  override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, realRenderer: RenderBlocks) = {
     RenderState.checkError(getClass.getName + ".renderWorldBlock: entering (aka: wasntme)")
 
-    world.getBlockTileEntity(x, y, z) match {
+    val renderer = patchedRenderer(realRenderer)
+    world.getTileEntity(x, y, z) match {
       case cable: tileentity.Cable =>
         renderCable(Cable.neighbors(world, x, y, z), block, cable.getBlockMetadata, x, y, z, renderer)
 
@@ -191,6 +196,48 @@ object BlockRenderer extends ISimpleBlockRenderingHandler {
         result
     }
   }
+
+  val isOneSevenTwo = Loader.instance.getMinecraftModContainer.getVersion == "1.7.2"
+
+  def patchedRenderer(renderer: RenderBlocks) = if (isOneSevenTwo) {
+    PatchedRenderBlocks.blockAccess = renderer.blockAccess
+    PatchedRenderBlocks.overrideBlockTexture = renderer.overrideBlockTexture
+    PatchedRenderBlocks.flipTexture = renderer.flipTexture
+    PatchedRenderBlocks.renderAllFaces = renderer.renderAllFaces
+    PatchedRenderBlocks.useInventoryTint = renderer.useInventoryTint
+    PatchedRenderBlocks.renderFromInside = renderer.renderFromInside
+    PatchedRenderBlocks.renderMinX = renderer.renderMinX
+    PatchedRenderBlocks.renderMaxX = renderer.renderMaxX
+    PatchedRenderBlocks.renderMinY = renderer.renderMinY
+    PatchedRenderBlocks.renderMaxY = renderer.renderMaxY
+    PatchedRenderBlocks.renderMinZ = renderer.renderMinZ
+    PatchedRenderBlocks.renderMaxZ = renderer.renderMaxZ
+    PatchedRenderBlocks.lockBlockBounds = renderer.lockBlockBounds
+    PatchedRenderBlocks.partialRenderBounds = renderer.partialRenderBounds
+    PatchedRenderBlocks.uvRotateEast = renderer.uvRotateEast
+    PatchedRenderBlocks.uvRotateWest = renderer.uvRotateWest
+    PatchedRenderBlocks.uvRotateSouth = renderer.uvRotateSouth
+    PatchedRenderBlocks.uvRotateNorth = renderer.uvRotateNorth
+    PatchedRenderBlocks.uvRotateTop = renderer.uvRotateTop
+    PatchedRenderBlocks.uvRotateBottom = renderer.uvRotateBottom
+    PatchedRenderBlocks
+  }
+  else renderer
+
+  object PatchedRenderBlocks extends RenderBlocks {
+    override def renderFaceXPos(block: Block, x: Double, y: Double, z: Double, texture: IIcon) {
+      flipTexture = !flipTexture
+      super.renderFaceXPos(block, x, y, z, texture)
+      flipTexture = !flipTexture
+    }
+
+    override def renderFaceZNeg(block: Block, x: Double, y: Double, z: Double, texture: IIcon) {
+      flipTexture = !flipTexture
+      super.renderFaceZNeg(block, x, y, z, texture)
+      flipTexture = !flipTexture
+    }
+  }
+
 
   def renderAssembler(block: Block, metadata: Int, x: Int, y: Int, z: Int, renderer: RenderBlocks) {
     val previousRenderAllFaces = renderer.renderAllFaces

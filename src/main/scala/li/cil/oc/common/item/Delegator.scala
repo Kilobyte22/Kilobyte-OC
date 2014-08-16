@@ -2,23 +2,22 @@ package li.cil.oc.common.item
 
 import java.util
 import java.util.Random
-import java.util.logging.Level
 
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.common.tileentity
 import li.cil.oc.{CreativeTab, OpenComputers, Settings}
-import net.minecraft.client.renderer.texture.IconRegister
+import net.minecraft.client.renderer.texture.IIconRegister
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.{EnumRarity, Item, ItemStack}
-import net.minecraft.util.{Icon, WeightedRandomChestContent}
+import net.minecraft.util.{IIcon, WeightedRandomChestContent}
 import net.minecraft.world.World
 import net.minecraftforge.common.ChestGenHooks
 
 import scala.collection.mutable
 
-class Delegator(id: Int) extends Item(id) {
+class Delegator extends Item {
   setHasSubtypes(true)
   setCreativeTab(CreativeTab)
 
@@ -53,7 +52,7 @@ class Delegator(id: Int) extends Item(id) {
       case _ => None
     }
 
-  override def getSubItems(itemId: Int, tab: CreativeTabs, list: util.List[_]) {
+  override def getSubItems(item: Item, tab: CreativeTabs, list: util.List[_]) {
     // Workaround for MC's untyped lists...
     def add[T](list: util.List[T], value: Any) = list.add(value.asInstanceOf[T])
     (0 until subItems.length).filter(subItems(_).showInItemList).
@@ -89,10 +88,10 @@ class Delegator(id: Int) extends Item(id) {
 
   override def getChestGenBase(chest: ChestGenHooks, rnd: Random, original: WeightedRandomChestContent) = original
 
-  override def shouldPassSneakingClickToBlock(world: World, x: Int, y: Int, z: Int) = {
-    world.getBlockTileEntity(x, y, z) match {
+  override def doesSneakBypassUse(world: World, x: Int, y: Int, z: Int, player: EntityPlayer) = {
+    world.getTileEntity(x, y, z) match {
       case drive: tileentity.DiskDrive => true
-      case _ => super.shouldPassSneakingClickToBlock(world, x, y, z)
+      case _ => super.doesSneakBypassUse(world, x, y, z, player)
     }
   }
 
@@ -118,13 +117,15 @@ class Delegator(id: Int) extends Item(id) {
 
   // ----------------------------------------------------------------------- //
 
-  override def getItemDisplayName(stack: ItemStack) =
+  def internalGetItemStackDisplayName(stack: ItemStack) = super.getItemStackDisplayName(stack)
+
+  override def getItemStackDisplayName(stack: ItemStack) =
     subItem(stack) match {
       case Some(subItem) => subItem.displayName(stack) match {
         case Some(name) => name
-        case _ => super.getItemDisplayName(stack)
+        case _ => super.getItemStackDisplayName(stack)
       }
-      case _ => super.getItemDisplayName(stack)
+      case _ => super.getItemStackDisplayName(stack)
     }
 
   @SideOnly(Side.CLIENT)
@@ -132,7 +133,7 @@ class Delegator(id: Int) extends Item(id) {
     super.addInformation(stack, player, tooltip, advanced)
     subItem(stack) match {
       case Some(subItem) => try subItem.tooltipLines(stack, player, tooltip.asInstanceOf[util.List[String]], advanced) catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Error in item tooltip.", t)
+        case t: Throwable => OpenComputers.log.warn("Error in item tooltip.", t)
       }
       case _ => // Nothing to add.
     }
@@ -176,7 +177,7 @@ class Delegator(id: Int) extends Item(id) {
   override def getIconIndex(stack: ItemStack) = getIcon(stack, 0)
 
   @SideOnly(Side.CLIENT)
-  override def getIconFromDamage(damage: Int): Icon =
+  override def getIconFromDamage(damage: Int): IIcon =
     subItem(damage) match {
       case Some(subItem) => subItem.icon match {
         case Some(icon) => icon
@@ -186,7 +187,7 @@ class Delegator(id: Int) extends Item(id) {
     }
 
   @SideOnly(Side.CLIENT)
-  override def registerIcons(iconRegister: IconRegister) {
+  override def registerIcons(iconRegister: IIconRegister) {
     super.registerIcons(iconRegister)
     subItems.foreach(_.registerIcons(iconRegister))
   }

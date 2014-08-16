@@ -1,7 +1,5 @@
 package li.cil.oc.common.tileentity
 
-import java.util.logging.Level
-
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.api.network.Visibility
 import li.cil.oc.common.Tier
@@ -11,9 +9,10 @@ import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.{InventoryUtils, ItemUtils}
 import li.cil.oc.{OpenComputers, Settings, api}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe, ShapedRecipes, ShapelessRecipes}
-import net.minecraft.item.{Item, ItemBucket, ItemStack}
+import net.minecraft.item.{ItemBucket, ItemStack}
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.oredict.{ShapedOreRecipe, ShapelessOreRecipe}
 
 import scala.collection.convert.WrapAsScala._
@@ -120,7 +119,7 @@ class Disassembler extends traits.Environment with traits.PowerAcceptor with tra
     val info = new ItemUtils.NavigationUpgradeData(stack)
     val parts = getIngredients(stack)
     queue ++= parts.map {
-      case part if part.getItem == Item.map => info.map
+      case part if part.getItem == net.minecraft.init.Items.filled_map => info.map
       case part => part
     }
   }
@@ -166,7 +165,7 @@ class Disassembler extends traits.Environment with traits.PowerAcceptor with tra
   }
   catch {
     case t: Throwable =>
-      OpenComputers.log.log(Level.WARNING, "Whoops, something went wrong when trying to figure out an item's parts.", t)
+      OpenComputers.log.warn("Whoops, something went wrong when trying to figure out an item's parts.", t)
       Iterable.empty
   }
 
@@ -191,7 +190,9 @@ class Disassembler extends traits.Environment with traits.PowerAcceptor with tra
   override def readFromNBT(nbt: NBTTagCompound) {
     super.readFromNBT(nbt)
     queue.clear()
-    queue ++= nbt.getTagList(Settings.namespace + "queue").map(ItemStack.loadItemStackFromNBT)
+    queue ++= nbt.getTagList(Settings.namespace + "queue", NBT.TAG_COMPOUND).map((list, index) => {
+      ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(index))
+    })
     buffer = nbt.getDouble(Settings.namespace + "buffer")
     totalRequiredEnergy = nbt.getDouble(Settings.namespace + "total")
     isActive = queue.nonEmpty

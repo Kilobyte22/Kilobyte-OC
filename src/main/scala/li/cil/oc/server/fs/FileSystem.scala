@@ -3,12 +3,11 @@ package li.cil.oc.server.fs
 import java.io
 import java.net.URL
 import java.util.UUID
-import java.util.logging.Level
 
 import li.cil.oc.api.driver.Container
 import li.cil.oc.api.fs.{Label, Mode}
 import li.cil.oc.server.component
-import li.cil.oc.util.mods.{ComputerCraft15, ComputerCraft16, Mods}
+import li.cil.oc.util.mods.{ComputerCraft, Mods}
 import li.cil.oc.{OpenComputers, Settings, api}
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
@@ -33,7 +32,7 @@ object FileSystem extends api.detail.FileSystemAPI {
       // Among the security errors, createNewFile can throw an IOException.
       // We just fall back to assuming case insensitive, since that's always
       // safe in those cases.
-      OpenComputers.log.log(Level.WARNING, "Couldn't determine if file system is case sensitive, falling back to insensitive.", t)
+      OpenComputers.log.warn("Couldn't determine if file system is case sensitive, falling back to insensitive.", t)
       true
   })
 
@@ -96,14 +95,10 @@ object FileSystem extends api.detail.FileSystemAPI {
   def fromMemory(capacity: Long): api.fs.FileSystem = new RamFileSystem(capacity)
 
   def fromComputerCraft(mount: AnyRef): api.fs.FileSystem = {
-    var result: Option[api.fs.FileSystem] = None
-    if (result.isEmpty && Mods.ComputerCraft16.isAvailable) {
-      result = ComputerCraft16.createFileSystem(mount)
+    if (Mods.ComputerCraft.isAvailable) {
+      ComputerCraft.createFileSystem(mount).orNull
     }
-    if (result.isEmpty && Mods.ComputerCraft15.isAvailable) {
-      result = ComputerCraft15.createFileSystem(mount)
-    }
-    result.orNull
+    else null
   }
 
   def asManagedEnvironment(fileSystem: api.fs.FileSystem, label: Label, container: Container) =

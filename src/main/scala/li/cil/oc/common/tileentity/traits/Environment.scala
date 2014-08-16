@@ -6,7 +6,7 @@ import li.cil.oc.api.{driver, network}
 import li.cil.oc.common.EventHandler
 import li.cil.oc.util.ExtendedNBT._
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.math.ScalaNumber
 
@@ -17,7 +17,7 @@ trait Environment extends TileEntity with network.Environment with driver.Contai
 
   override def zPosition = z + 0.5
 
-  override def markChanged() = onInventoryChanged()
+  override def markChanged() = markDirty()
 
   protected def isConnected = node.address != null && node.network != null
 

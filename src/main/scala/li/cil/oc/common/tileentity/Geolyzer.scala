@@ -2,7 +2,7 @@ package li.cil.oc.common.tileentity
 
 import li.cil.oc.api.network.{Arguments, Callback, Context, Visibility}
 import li.cil.oc.{Settings, api}
-import net.minecraft.block.{Block, BlockFluid}
+import net.minecraft.block.Block
 import net.minecraftforge.fluids.FluidRegistry
 
 class Geolyzer extends traits.Environment {
@@ -34,10 +34,9 @@ class Geolyzer extends traits.Environment {
     val values = noise.map(_ / 128f / 33f)
     for (ry <- 0 until count) {
       val by = y + ry - 32
-      val blockId = world.getBlockId(bx, by, bz)
-      if (blockId > 0 && !world.isAirBlock(bx, by, bz)) {
-        val block = Block.blocksList(blockId)
-        if (block != null && (includeReplaceable || isFluid(block) || !block.isBlockReplaceable(world, x, y, z))) {
+      if (!world.isAirBlock(bx, by, bz)) {
+        val block = world.getBlock(bx, by, bz)
+        if (block != null && (includeReplaceable || isFluid(block) || !block.isReplaceable(world, x, y, z))) {
           values(ry) = values(ry) * (math.abs(ry - 32) + 1) * Settings.get.geolyzerNoise + block.getBlockHardness(world, bx, by, bz)
         }
       }
@@ -47,5 +46,5 @@ class Geolyzer extends traits.Environment {
     result(values)
   }
 
-  private def isFluid(block: Block) = FluidRegistry.lookupFluidForBlock(block) != null || block.isInstanceOf[BlockFluid]
+  private def isFluid(block: Block) = FluidRegistry.lookupFluidForBlock(block) != null
 }

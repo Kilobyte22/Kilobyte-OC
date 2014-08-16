@@ -7,6 +7,7 @@ import li.cil.oc.common.tileentity
 import li.cil.oc.util.mods.Mods
 import li.cil.oc.{Localization, Settings}
 import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
+import net.minecraft.block.Block
 import net.minecraft.item.ItemStack
 import net.minecraft.world.{IBlockAccess, World}
 
@@ -24,7 +25,7 @@ class Capacitor(val parent: SimpleDelegator) extends SimpleDelegate {
   override def wailaBody(stack: ItemStack, tooltip: util.List[String], accessor: IWailaDataAccessor, config: IWailaConfigHandler) {
     val node = accessor.getNBTData.getCompoundTag(Settings.namespace + "node")
     if (node.hasKey("buffer")) {
-      tooltip.add(Localization.Analyzer.StoredEnergy(node.getDouble("buffer").toInt.toString).toString)
+      tooltip.add(Localization.Analyzer.StoredEnergy(node.getDouble("buffer").toInt.toString).getUnformattedTextForChat)
     }
   }
 
@@ -38,8 +39,8 @@ class Capacitor(val parent: SimpleDelegator) extends SimpleDelegate {
 
   // ----------------------------------------------------------------------- //
 
-  override def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, blockId: Int) =
-    world.getBlockTileEntity(x, y, z) match {
+  override def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, block: Block) =
+    world.getTileEntity(x, y, z) match {
       case capacitor: tileentity.Capacitor => capacitor.recomputeCapacity()
       case _ =>
     }

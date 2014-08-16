@@ -9,13 +9,14 @@ import li.cil.oc.util.ExtendedArguments._
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.InventoryUtils
 import li.cil.oc.{OpenComputers, Settings, api}
-import net.minecraft.block.{Block, BlockFluid}
 import net.minecraft.entity.item.{EntityItem, EntityMinecart}
 import net.minecraft.entity.{Entity, EntityLivingBase}
 import net.minecraft.item.{ItemBlock, ItemStack}
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.util.{EnumMovingObjectType, MovingObjectPosition}
-import net.minecraftforge.common.{ForgeDirection, MinecraftForge}
+import net.minecraft.util.{Vec3, MovingObjectPosition}
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.event.world.BlockEvent
 import net.minecraftforge.fluids.FluidRegistry
 
@@ -123,7 +124,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
             if (from.stackSize == 0) {
               robot.setInventorySlotContents(selectedSlot, null)
             }
-            robot.onInventoryChanged()
+            robot.markDirty()
             true
           }
           else false
@@ -148,7 +149,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
       case Some(stack) => Option(stack.getItem) match {
         case Some(item: ItemBlock) =>
           val (bx, by, bz) = (x + side.offsetX, y + side.offsetY, z + side.offsetZ)
-          val idMatches = item.getBlockID == world.getBlockId(bx, by, bz)
+          val idMatches = item.field_150939_a == world.getBlock(bx, by, bz)
           val subTypeMatches = !item.getHasSubtypes || item.getMetadata(stack.getItemDamage) == world.getBlockMetadata(bx, by, bz)
           return result(idMatches && subTypeMatches)
         case _ =>
@@ -177,7 +178,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
           }
           else {
             // Dropped partial stack.
-            robot.onInventoryChanged()
+            robot.markDirty()
           }
         case _ =>
           // No inventory to drop into, drop into the world.
@@ -212,7 +213,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
       val player = robot.player(facing, side)
       player.setSneaking(sneaky)
       val success = Option(pick(player, Settings.get.useAndPlaceRange)) match {
-        case Some(hit) if hit.typeOfHit == EnumMovingObjectType.TILE =>
+        case Some(hit) if hit.typeOfHit == MovingObjectType.BLOCK =>
           val (bx, by, bz, hx, hy, hz) = clickParamsFromHit(hit)
           player.placeBlock(robot.selectedSlot, bx, by, bz, hit.sideHit, hx, hy, hz)
         case None if canPlaceInAir && player.closestEntity[Entity]().isEmpty =>
@@ -316,25 +317,29 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
       val player = robot.player(facing, side)
       player.setSneaking(sneaky)
 
-      val (success, what) = Option(pick(player, Settings.get.swingRange)) match {
-        case Some(hit) =>
-          hit.typeOfHit match {
-            case EnumMovingObjectType.ENTITY =>
-              attack(player, hit.entityHit)
-            case EnumMovingObjectType.TILE =>
-              click(player, hit.blockX, hit.blockY, hit.blockZ, hit.sideHit)
-          }
-        case _ => // Retry with full block bounds, disregarding swing range.
-          player.closestEntity[EntityLivingBase]() match {
-            case Some(entity) =>
-              attack(player, entity)
-            case _ =>
-              if (world.extinguishFire(player, x, y, z, facing.ordinal)) {
-                triggerDelay()
-                (true, "fire")
-              }
-              else (false, "air")
-          }
+      val (success, what) = {
+        val hit = pick(player, Settings.get.swingRange)
+        (Option(hit) match {
+          case Some(info) => info.typeOfHit
+          case _ => MovingObjectType.MISS
+        }) match {
+          case MovingObjectType.ENTITY =>
+            attack(player, hit.entityHit)
+          case MovingObjectType.BLOCK =>
+            click(player, hit.blockX, hit.blockY, hit.blockZ, hit.sideHit)
+          case _ =>
+            // Retry with full block bounds, disregarding swing range.
+            player.closestEntity[EntityLivingBase]() match {
+              case Some(entity) =>
+                attack(player, entity)
+              case _ =>
+                if (world.extinguishFire(player, x, y, z, facing.ordinal)) {
+                  triggerDelay()
+                  (true, "fire")
+                }
+                else (false, "air")
+            }
+        }
       }
 
       player.setSneaking(false)
@@ -391,10 +396,10 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
       player.setSneaking(sneaky)
 
       val (success, what) = Option(pick(player, Settings.get.useAndPlaceRange)) match {
-        case Some(hit) if hit.typeOfHit == EnumMovingObjectType.ENTITY && interact(player, hit.entityHit) =>
+        case Some(hit) if hit.typeOfHit == MovingObjectType.ENTITY && interact(player, hit.entityHit) =>
           triggerDelay()
           (true, "item_interacted")
-        case Some(hit) if hit.typeOfHit == EnumMovingObjectType.TILE =>
+        case Some(hit) if hit.typeOfHit == MovingObjectType.BLOCK =>
           val (bx, by, bz, hx, hy, hz) = clickParamsFromHit(hit)
           activationResult(player.activateBlockOrUseItem(bx, by, bz, hit.sideHit, hx, hy, hz, duration))
         case _ =>
@@ -542,18 +547,17 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
         (true, "entity")
       case _ =>
         val (bx, by, bz) = (x + side.offsetX, y + side.offsetY, z + side.offsetZ)
-        val id = world.getBlockId(bx, by, bz)
-        val block = Block.blocksList(id)
+        val block = world.getBlock(bx, by, bz)
         val metadata = world.getBlockMetadata(bx, by, bz)
-        if (id == 0 || block == null || block.isAirBlock(world, bx, by, bz)) {
+        if (block == null || block.isAir(world, bx, by, bz)) {
           (false, "air")
         }
-        else if (FluidRegistry.lookupFluidForBlock(block) != null || block.isInstanceOf[BlockFluid]) {
+        else if (FluidRegistry.lookupFluidForBlock(block) != null) {
           val event = new BlockEvent.BreakEvent(bx, by, bz, world, block, metadata, player)
           MinecraftForge.EVENT_BUS.post(event)
           (event.isCanceled, "liquid")
         }
-        else if (block.isBlockReplaceable(world, bx, by, bz)) {
+        else if (block.isReplaceable(world, bx, by, bz)) {
           val event = new BlockEvent.BreakEvent(bx, by, bz, world, block, metadata, player)
           MinecraftForge.EVENT_BUS.post(event)
           (event.isCanceled, "replaceable")
@@ -565,7 +569,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
   }
 
   private def pick(player: Player, range: Double) = {
-    val origin = world.getWorldVec3Pool.getVecFromPool(
+    val origin = Vec3.createVectorHelper(
       player.posX + player.facing.offsetX * 0.5,
       player.posY + player.facing.offsetY * 0.5,
       player.posZ + player.facing.offsetZ * 0.5)
@@ -577,9 +581,9 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
       player.side.offsetX * range,
       player.side.offsetY * range,
       player.side.offsetZ * range)
-    val hit = world.clip(origin, target)
+    val hit = world.rayTraceBlocks(origin, target)
     player.closestEntity[Entity]() match {
-      case Some(entity@(_: EntityLivingBase | _: EntityMinecart)) if hit == null || world.getWorldVec3Pool.getVecFromPool(player.posX, player.posY, player.posZ).distanceTo(hit.hitVec) > player.getDistanceToEntity(entity) => new MovingObjectPosition(entity)
+      case Some(entity@(_: EntityLivingBase | _: EntityMinecart)) if hit == null || Vec3.createVectorHelper(player.posX, player.posY, player.posZ).distanceTo(hit.hitVec) > player.getDistanceToEntity(entity) => new MovingObjectPosition(entity)
       case _ => hit
     }
   }
@@ -610,7 +614,7 @@ class Robot(val robot: tileentity.Robot) extends ManagedComponent {
   // ----------------------------------------------------------------------- //
 
   private def haveSameItemType(stackA: ItemStack, stackB: ItemStack) =
-    stackA.itemID == stackB.itemID &&
+    stackA.getItem == stackB.getItem &&
       (!stackA.getHasSubtypes || stackA.getItemDamage == stackB.getItemDamage)
 
   private def stackInSlot(slot: Int) = Option(robot.getStackInSlot(slot))

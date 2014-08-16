@@ -3,6 +3,7 @@ package li.cil.oc.util
 import li.cil.oc.Settings
 import li.cil.oc.api.component.TextBuffer.ColorDepth
 import net.minecraft.nbt._
+import net.minecraftforge.common.util.Constants.NBT
 
 /**
  * This stores chars in a 2D-Array and provides some manipulation functions.
@@ -218,13 +219,10 @@ class TextBuffer(var width: Int, var height: Int, initialFormat: PackedColor.Col
     val h = nbt.getInteger("height") max 1 min Settings.screenResolutionsByTier(2)._2
     size = (w, h)
 
-    val b = nbt.getTagList("buffer")
+    val b = nbt.getTagList("buffer", NBT.TAG_STRING)
     for (i <- 0 until math.min(h, b.tagCount)) {
-      b.tagAt(i) match {
-        case tag: NBTTagString =>
-          System.arraycopy(tag.data.toCharArray, 0, buffer(i), 0, math.min(tag.data.length, buffer(i).length))
-        case _ =>
-      }
+      val value = b.getStringTagAt(i)
+      System.arraycopy(value.toCharArray, 0, buffer(i), 0, math.min(value.length, buffer(i).length))
     }
 
     val depth = ColorDepth.values.apply(nbt.getInteger("depth") min (ColorDepth.values.length - 1) max 0)
@@ -233,15 +231,15 @@ class TextBuffer(var width: Int, var height: Int, initialFormat: PackedColor.Col
     foreground = PackedColor.Color(nbt.getInteger("foreground"), nbt.getBoolean("foregroundIsPalette"))
     background = PackedColor.Color(nbt.getInteger("background"), nbt.getBoolean("backgroundIsPalette"))
 
-    val c = nbt.getTagList("color")
-    for (i <- 0 until h) {
-      val rowColor = color(i)
-      for (j <- 0 until w) {
-        val index = j + i * w
-        if (index < c.tagCount) {
-          c.tagAt(index) match {
-            case tag: NBTTagShort => rowColor(j) = tag.data
-            case _ =>
+    // For upgrading from 1.6 - was tag list of short before.
+    if (nbt.hasKey("color", NBT.TAG_INT_ARRAY)) {
+      val c = nbt.getIntArray("color")
+      for (i <- 0 until h) {
+        val rowColor = color(i)
+        for (j <- 0 until w) {
+          val index = j + i * w
+          if (index < c.length) {
+            rowColor(j) = c(index).toShort
           }
         }
       }
@@ -254,7 +252,7 @@ class TextBuffer(var width: Int, var height: Int, initialFormat: PackedColor.Col
 
     val b = new NBTTagList()
     for (i <- 0 until height) {
-      b.appendTag(new NBTTagString(null, String.valueOf(buffer(i))))
+      b.appendTag(new NBTTagString(String.valueOf(buffer(i))))
     }
     nbt.setTag("buffer", b)
 
@@ -265,14 +263,7 @@ class TextBuffer(var width: Int, var height: Int, initialFormat: PackedColor.Col
     nbt.setInteger("background", _background.value)
     nbt.setBoolean("backgroundIsPalette", _background.isPalette)
 
-    val c = new NBTTagList()
-    for (i <- 0 until height) {
-      val rowColor = color(i)
-      for (j <- 0 until width) {
-        c.appendTag(new NBTTagShort(null, rowColor(j)))
-      }
-    }
-    nbt.setTag("color", c)
+    nbt.setTag("color", new NBTTagIntArray(color.flatten.map(_.toInt).toArray))
   }
 
   override def toString = {

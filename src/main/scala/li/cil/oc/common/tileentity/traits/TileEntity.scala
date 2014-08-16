@@ -1,14 +1,12 @@
 package li.cil.oc.common.tileentity.traits
 
-import java.util.logging.Level
-
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.OpenComputers
 import li.cil.oc.client.Sound
 import li.cil.oc.util.SideTracker
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.network.INetworkManager
-import net.minecraft.network.packet.Packet132TileEntityData
+import net.minecraft.network.NetworkManager
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 
 trait TileEntity extends net.minecraft.tileentity.TileEntity {
   def world = getWorldObj
@@ -70,14 +68,14 @@ trait TileEntity extends net.minecraft.tileentity.TileEntity {
   override def getDescriptionPacket = {
     val nbt = new NBTTagCompound()
     try writeToNBTForClient(nbt) catch {
-      case e: Throwable => OpenComputers.log.log(Level.WARNING, "There was a problem writing a TileEntity description packet. Please report this if you see it!", e)
+      case e: Throwable => OpenComputers.log.warn("There was a problem writing a TileEntity description packet. Please report this if you see it!", e)
     }
-    if (nbt.hasNoTags) null else new Packet132TileEntityData(x, y, z, -1, nbt)
+    if (nbt.hasNoTags) null else new S35PacketUpdateTileEntity(x, y, z, -1, nbt)
   }
 
-  override def onDataPacket(manager: INetworkManager, packet: Packet132TileEntityData) {
-    try readFromNBTForClient(packet.data) catch {
-      case e: Throwable => OpenComputers.log.log(Level.WARNING, "There was a problem reading a TileEntity description packet. Please report this if you see it!", e)
+  override def onDataPacket(manager: NetworkManager, packet: S35PacketUpdateTileEntity) {
+    try readFromNBTForClient(packet.func_148857_g()) catch {
+      case e: Throwable => OpenComputers.log.warn("There was a problem reading a TileEntity description packet. Please report this if you see it!", e)
     }
   }
 }

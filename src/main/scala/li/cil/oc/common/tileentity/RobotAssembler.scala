@@ -11,7 +11,7 @@ import li.cil.oc.util.ItemUtils
 import li.cil.oc.{Settings, api}
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class RobotAssembler extends traits.Environment with traits.PowerAcceptor with traits.Inventory with traits.Rotatable with SidedEnvironment {
   val node = api.Network.newNode(this, Visibility.Network).
@@ -87,7 +87,7 @@ class RobotAssembler extends traits.Environment with traits.PowerAcceptor with t
       ServerPacketSender.sendRobotAssembling(this, assembling = true)
 
       for (slot <- 0 until getSizeInventory) items(slot) = None
-      onInventoryChanged()
+      markDirty()
 
       true
     }

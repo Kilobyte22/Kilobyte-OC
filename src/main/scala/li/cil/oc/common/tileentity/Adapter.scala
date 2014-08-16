@@ -4,7 +4,8 @@ import li.cil.oc.api.network._
 import li.cil.oc.{Settings, api}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.{NBTTagCompound, NBTTagList}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.mutable
 
@@ -39,7 +40,7 @@ class Adapter extends traits.Environment with Analyzable {
   def neighborChanged(d: ForgeDirection) {
     if (node != null && node.network != null) {
       val (x, y, z) = (this.x + d.offsetX, this.y + d.offsetY, this.z + d.offsetZ)
-      world.getBlockTileEntity(x, y, z) match {
+      world.getTileEntity(x, y, z) match {
         case env: traits.Environment =>
         // Don't provide adaption for our stuffs. This is mostly to avoid
         // cables and other non-functional stuff popping up in the adapter
@@ -120,10 +121,9 @@ class Adapter extends traits.Environment with Analyzable {
   override def readFromNBT(nbt: NBTTagCompound) {
     super.readFromNBT(nbt)
 
-    val blocksNbt = nbt.getTagList(Settings.namespace + "adapter.blocks")
+    val blocksNbt = nbt.getTagList(Settings.namespace + "adapter.blocks", NBT.TAG_COMPOUND)
     (0 until (blocksNbt.tagCount min blocksData.length)).
-      map(blocksNbt.tagAt).
-      map(_.asInstanceOf[NBTTagCompound]).
+      map(blocksNbt.getCompoundTagAt).
       zipWithIndex.
       foreach {
       case (blockNbt, i) =>
@@ -146,7 +146,7 @@ class Adapter extends traits.Environment with Analyzable {
             case _ =>
           }
           blockNbt.setString("name", data.name)
-          blockNbt.setCompoundTag("data", data.data)
+          blockNbt.setTag("data", data.data)
         case _ =>
       }
       blocksNbt.appendTag(blockNbt)

@@ -5,7 +5,7 @@ import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait Inventory extends TileEntity with inventory.Inventory {
   lazy val items = Array.fill[Option[ItemStack]](getSizeInventory)(None)
@@ -25,7 +25,7 @@ trait Inventory extends TileEntity with inventory.Inventory {
   // ----------------------------------------------------------------------- //
 
   override def isUseableByPlayer(player: EntityPlayer) =
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case t: TileEntity if t == this => player.getDistanceSq(x + 0.5, y + 0.5, z + 0.5) <= 64
       case _ => false
     }

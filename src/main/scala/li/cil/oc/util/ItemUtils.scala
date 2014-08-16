@@ -1,15 +1,14 @@
 package li.cil.oc.util
 
-import java.util.logging.Level
-
 import com.google.common.base.Strings
 import li.cil.oc.api.Persistable
 import li.cil.oc.common.Tier
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.{Blocks, OpenComputers, Settings, api, server}
-import net.minecraft.item.{Item, ItemMap, ItemStack}
-import net.minecraft.nbt.{NBTBase, NBTTagCompound}
+import net.minecraft.item.{ItemMap, ItemStack}
+import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
+import net.minecraftforge.common.util.Constants.NBT
 
 import scala.io.Source
 
@@ -34,7 +33,7 @@ object ItemUtils {
 
     def save(stack: ItemStack) {
       if (!stack.hasTagCompound) {
-        stack.setTagCompound(new NBTTagCompound("tag"))
+        stack.setTagCompound(new NBTTagCompound())
       }
       save(stack.getTagCompound)
     }
@@ -71,8 +70,12 @@ object ItemUtils {
       robotEnergy = nbt.getInteger(Settings.namespace + "robotEnergy")
       if (nbt.hasKey(Settings.namespace + "components")) {
         tier = nbt.getInteger(Settings.namespace + "tier")
-        components = nbt.getTagList(Settings.namespace + "components").map(ItemStack.loadItemStackFromNBT).toArray
-        containers = nbt.getTagList(Settings.namespace + "containers").map(ItemStack.loadItemStackFromNBT).toArray
+        components = nbt.getTagList(Settings.namespace + "components", NBT.TAG_COMPOUND).map((list, index) => {
+          ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(index))
+        }).toArray
+        containers = nbt.getTagList(Settings.namespace + "containers", NBT.TAG_COMPOUND).map((list, index) => {
+          ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(index))
+        }).toArray
       }
       else {
         // Old robot, upgrade to new modular model.
@@ -126,9 +129,8 @@ object ItemUtils {
       newInfo.components.foreach(cs => Option(api.Driver.driverFor(cs)) match {
         case Some(driver) if driver == server.driver.item.Screen =>
           val nbt = driver.dataTag(cs)
-          nbt.getTags.toArray.foreach {
-            case tag: NBTBase => nbt.removeTag(tag.getName)
-            case _ =>
+          for (tagName <- nbt.func_150296_c().toArray) {
+            nbt.removeTag(tagName.asInstanceOf[String])
           }
         case _ =>
       })
@@ -149,7 +151,7 @@ object ItemUtils {
     }
     catch {
       case t: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Failed loading robot name list.", t)
+        OpenComputers.log.warn("Failed loading robot name list.", t)
         Array.empty[String]
     }
 
@@ -162,7 +164,7 @@ object ItemUtils {
       load(stack)
     }
 
-    var map = new ItemStack(Item.map)
+    var map = new ItemStack(net.minecraft.init.Items.filled_map)
 
     def mapData(world: World) = try map.getItem.asInstanceOf[ItemMap].getMapData(map, world) catch {
       case _: Throwable => throw new Exception("invalid map")
@@ -176,7 +178,7 @@ object ItemUtils {
 
     override def save(stack: ItemStack) {
       if (!stack.hasTagCompound) {
-        stack.setTagCompound(new NBTTagCompound("tag"))
+        stack.setTagCompound(new NBTTagCompound())
       }
       save(stack.getCompoundTag(Settings.namespace + "data"))
     }

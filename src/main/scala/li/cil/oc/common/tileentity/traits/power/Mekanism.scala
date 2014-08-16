@@ -3,7 +3,7 @@ package li.cil.oc.common.tileentity.traits.power
 import cpw.mods.fml.common.Optional
 import li.cil.oc.Settings
 import li.cil.oc.util.mods.Mods
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait Mekanism extends Common {
   @Optional.Method(modid = Mods.IDs.Mekanism)

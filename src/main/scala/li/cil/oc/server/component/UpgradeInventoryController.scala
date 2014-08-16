@@ -8,7 +8,7 @@ import li.cil.oc.api.network._
 import li.cil.oc.common.component
 import li.cil.oc.util.ExtendedArguments._
 import li.cil.oc.util.InventoryUtils
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class UpgradeInventoryController(val owner: Container with Robot) extends component.ManagedComponent {
   val node = Network.newNode(this, Visibility.Network).
@@ -64,7 +64,7 @@ class UpgradeInventoryController(val owner: Container with Robot) extends compon
           }
           else {
             // Dropped partial stack.
-            owner.onInventoryChanged()
+            owner.markDirty()
           }
         case _ => return result(false, "no inventory")
       }

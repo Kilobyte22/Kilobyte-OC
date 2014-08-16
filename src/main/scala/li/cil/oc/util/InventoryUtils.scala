@@ -1,13 +1,12 @@
 package li.cil.oc.util
 
-import net.minecraft.block.Block
 import net.minecraft.entity.item.EntityMinecartContainer
 import net.minecraft.inventory.{IInventory, ISidedInventory}
 import net.minecraft.item.ItemStack
 import net.minecraft.tileentity.TileEntityChest
 import net.minecraft.util.AxisAlignedBB
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.convert.WrapAsScala._
 
@@ -19,8 +18,8 @@ object InventoryUtils {
    * mine carts with chests.
    */
   def inventoryAt(world: World, x: Int, y: Int, z: Int) = {
-    world.getBlockTileEntity(x, y, z) match {
-      case chest: TileEntityChest => Option(Block.chest.getInventory(world, chest.xCoord, chest.yCoord, chest.zCoord))
+    world.getTileEntity(x, y, z) match {
+      case chest: TileEntityChest => Option(net.minecraft.init.Blocks.chest.func_149951_m(world, chest.xCoord, chest.yCoord, chest.zCoord))
       case inventory: IInventory => Some(inventory)
       case _ => world.getEntitiesWithinAABB(classOf[EntityMinecartContainer],
         AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1)).
@@ -66,7 +65,7 @@ object InventoryUtils {
           val amount = math.min(space, math.min(stack.stackSize, limit))
           existing.stackSize += amount
           stack.stackSize -= amount
-          inventory.onInventoryChanged()
+          inventory.markDirty()
           true
         }
         else (existing == null) && {
@@ -120,7 +119,7 @@ object InventoryUtils {
           inventory.setInventorySlotContents(slot, null)
         }
         else if (success) {
-          inventory.onInventoryChanged()
+          inventory.markDirty()
         }
         success
       }

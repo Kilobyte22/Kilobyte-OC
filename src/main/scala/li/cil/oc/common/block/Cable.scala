@@ -9,10 +9,11 @@ import li.cil.oc.client.Textures
 import li.cil.oc.common.multipart.CablePart
 import li.cil.oc.common.tileentity
 import li.cil.oc.util.mods.Mods
+import net.minecraft.block.Block
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.AxisAlignedBB
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Cable(val parent: SpecialDelegator) extends SpecialDelegate {
   override protected def customTextures = Array(
@@ -38,19 +39,19 @@ class Cable(val parent: SpecialDelegator) extends SpecialDelegate {
 
   // ----------------------------------------------------------------------- //
 
-  override def isNormalCube(world: World, x: Int, y: Int, z: Int) = false
+  override def isNormalCube(world: IBlockAccess, x: Int, y: Int, z: Int) = false
 
   override def isSolid(world: IBlockAccess, x: Int, y: Int, z: Int, side: ForgeDirection) = false
 
-  override def opacity(world: World, x: Int, y: Int, z: Int) = 0
+  override def opacity(world: IBlockAccess, x: Int, y: Int, z: Int) = 0
 
   override def shouldSideBeRendered(world: IBlockAccess, x: Int, y: Int, z: Int, side: ForgeDirection) = true
 
   // ----------------------------------------------------------------------- //
 
-  override def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, blockId: Int) {
-    world.markBlockForRenderUpdate(x, y, z)
-    super.neighborBlockChanged(world, x, y, z, blockId)
+  override def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, block: Block) {
+    world.markBlockForUpdate(x, y, z)
+    super.neighborBlockChanged(world, x, y, z, block)
   }
 
   override def updateBounds(world: IBlockAccess, x: Int, y: Int, z: Int) {
@@ -81,11 +82,11 @@ object Cable {
 
   def neighbors(world: IBlockAccess, x: Int, y: Int, z: Int) = {
     var result = 0
-    val tileEntity = world.getBlockTileEntity(x, y, z)
+    val tileEntity = world.getTileEntity(x, y, z)
     for (side <- ForgeDirection.VALID_DIRECTIONS) {
       val (tx, ty, tz) = (x + side.offsetX, y + side.offsetY, z + side.offsetZ)
       if (!world.isAirBlock(tx, ty, tz)) {
-        val neighborTileEntity = world.getBlockTileEntity(tx, ty, tz)
+        val neighborTileEntity = world.getTileEntity(tx, ty, tz)
         val neighborHasNode = hasNetworkNode(neighborTileEntity, side.getOpposite)
         val canConnect = !Mods.ForgeMultipart.isAvailable ||
           (canConnectFromSide(tileEntity, side) && canConnectFromSide(neighborTileEntity, side.getOpposite))

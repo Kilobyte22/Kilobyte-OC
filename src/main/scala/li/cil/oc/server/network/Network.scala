@@ -13,7 +13,7 @@ import li.cil.oc.util.mods.Mods
 import li.cil.oc.{OpenComputers, Settings, api}
 import net.minecraft.nbt._
 import net.minecraft.tileentity.TileEntity
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -379,7 +379,7 @@ object Network extends api.detail.NetworkAPI {
           tileEntity.yCoord + side.offsetY,
           tileEntity.zCoord + side.offsetZ)
         val localNode = getNetworkNode(tileEntity, side)
-        val neighborTileEntity = tileEntity.getWorldObj.getBlockTileEntity(nx, ny, nz)
+        val neighborTileEntity = tileEntity.getWorldObj.getTileEntity(nx, ny, nz)
         val neighborNode = getNetworkNode(neighborTileEntity, side.getOpposite)
         localNode match {
           case Some(node: MutableNode) =>
@@ -490,11 +490,11 @@ object Network extends api.detail.NetworkAPI {
     val data = (for (i <- 0 until nbt.getInteger("dataLength")) yield {
       if (nbt.hasKey("data" + i)) {
         nbt.getTag("data" + i) match {
-          case boolean: NBTTagByte => Boolean.box(boolean.data == 1)
-          case integer: NBTTagInt => Int.box(integer.data)
-          case double: NBTTagDouble => Double.box(double.data)
-          case string: NBTTagString => string.data: AnyRef
-          case array: NBTTagByteArray => array.byteArray
+          case boolean: NBTTagByte => Boolean.box(boolean.func_150290_f == 1)
+          case integer: NBTTagInt => Int.box(integer.func_150287_d)
+          case double: NBTTagDouble => Double.box(double.func_150286_g)
+          case string: NBTTagString => string.func_150285_a_(): AnyRef
+          case array: NBTTagByteArray => array.func_150292_c
         }
       }
       else null
@@ -641,7 +641,7 @@ object Network extends api.detail.NetworkAPI {
         case value: java.lang.Double => nbt.setDouble("data" + i, value)
         case value: java.lang.String => nbt.setString("data" + i, value)
         case value: Array[Byte] => nbt.setByteArray("data" + i, value)
-        case value => OpenComputers.log.warning("Unexpected type while saving network packet: " + value.getClass.getName)
+        case value => OpenComputers.log.warn("Unexpected type while saving network packet: " + value.getClass.getName)
       }
     }
   }

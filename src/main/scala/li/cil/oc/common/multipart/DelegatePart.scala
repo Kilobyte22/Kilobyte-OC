@@ -5,7 +5,7 @@ import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.common.block.Delegate
 import net.minecraft.entity.Entity
 import net.minecraft.util.MovingObjectPosition
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.convert.WrapAsJava
 

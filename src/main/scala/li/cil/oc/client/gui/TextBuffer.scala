@@ -112,7 +112,7 @@ trait TextBuffer extends GuiScreen {
           case _ => // Wasn't pressed while viewing the screen.
         }
 
-        if (Keyboard.isKeyDown(KeyBindings.clipboardPaste.keyCode) && Keyboard.getEventKeyState) {
+        if (Keyboard.isKeyDown(KeyBindings.clipboardPaste.getKeyCode) && Keyboard.getEventKeyState) {
           buffer.clipboard(GuiScreen.getClipboardString, null)
         }
       }

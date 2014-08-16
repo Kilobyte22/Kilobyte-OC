@@ -1,7 +1,8 @@
 package li.cil.oc.common.tileentity
 
 import cpw.mods.fml.common.Optional
-import dan200.computer.api.{IComputerAccess, ILuaContext, IPeripheral}
+import dan200.computercraft.api.lua.ILuaContext
+import dan200.computercraft.api.peripheral.{IComputerAccess, IPeripheral}
 import li.cil.oc.api.Driver
 import li.cil.oc.api.network.{Message, Packet}
 import li.cil.oc.common.{InventorySlots, Slot, item}
@@ -10,28 +11,15 @@ import li.cil.oc.util.mods.Mods
 import li.cil.oc.{Items, Settings, api}
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.mutable
 
-// Note on the CC1.5+1.6 compatibility
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// We simply implement both APIs. Since 1.6 moved all logic out of the actual
-// tile entities (this is essentially exactly like OC's block drivers, except
-// that in CC computers are adapters, too) we can keep the CC 1.6 stuff in the
-// peripheral provider.
-// The @Optional annotations are probably superfluous, they're just there
-// because I'm paranoid. If either one of the two APIs is missing, our class
-// transformer will take care of stripping out methods and interfaces that are
-// not present.
-// Aside from that, at least for now CC 1.6 is shipping both the new and the
-// old API, so there should be no ClassNotFoundExceptions anyway.
-
-@Optional.Interface(iface = "dan200.computer.api.IPeripheral", modid = Mods.IDs.ComputerCraft)
+@Optional.Interface(iface = "dan200.computercraft.api.peripheral.IPeripheral", modid = Mods.IDs.ComputerCraft)
 class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with traits.ComponentInventory {
   var lastMessage = 0L
 
-  val computers = mutable.Map.empty[AnyRef, ComputerWrapper]
+  val computers = mutable.Buffer.empty[AnyRef]
 
   val openPorts = mutable.Map.empty[AnyRef, mutable.Set[Int]]
 
@@ -43,17 +31,8 @@ class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with 
   override def getType = "oc_adapter"
 
   @Optional.Method(modid = Mods.IDs.ComputerCraft)
-  override def canAttachToSide(side: Int) = true
-
-  @Optional.Method(modid = Mods.IDs.ComputerCraft)
   override def attach(computer: IComputerAccess) {
-    computers += computer -> new ComputerWrapper {
-      override def id = computer.getID
-
-      override def attachmentName = computer.getAttachmentName
-
-      override def queueEvent(name: String, args: Array[AnyRef]) = computer.queueEvent(name, args)
-    }
+    computers += computer
     openPorts += computer -> mutable.Set.empty
   }
 
@@ -67,11 +46,7 @@ class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with 
   override def getMethodNames = Array("open", "isOpen", "close", "closeAll", "maxPacketSize", "transmit", "isWireless")
 
   @Optional.Method(modid = Mods.IDs.ComputerCraft)
-  override def callMethod(computer: IComputerAccess, context: ILuaContext, method: Int, arguments: Array[AnyRef]) =
-    callMethod(computer, computer.getID, computer.getAttachmentName, method, arguments)
-
-  @Optional.Method(modid = Mods.IDs.ComputerCraft)
-  def callMethod(computer: AnyRef, computerId: Int, attachmentName: String, method: Int, arguments: Array[AnyRef]): Array[AnyRef] = getMethodNames()(method) match {
+  override def callMethod(computer: IComputerAccess, context: ILuaContext, method: Int, arguments: Array[AnyRef]) = getMethodNames()(method) match {
     case "open" =>
       val port = checkPort(arguments, 0)
       if (openPorts(computer).size >= 128)
@@ -92,11 +67,14 @@ class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with 
       val sendPort = checkPort(arguments, 0)
       val answerPort = checkPort(arguments, 1)
       val data = Seq(Int.box(answerPort)) ++ arguments.drop(2)
-      val packet = api.Network.newPacket(s"cc${computerId}_$attachmentName", null, sendPort, data.toArray)
+      val packet = api.Network.newPacket(s"cc${computer.getID}_${computer.getAttachmentName}", null, sendPort, data.toArray)
       result(tryEnqueuePacket(ForgeDirection.UNKNOWN, packet))
     case "isWireless" => result(this.isInstanceOf[AccessPoint])
     case _ => null
   }
+
+  @Optional.Method(modid = Mods.IDs.ComputerCraft)
+  override def equals(other: IPeripheral) = other == this
 
   // ----------------------------------------------------------------------- //
 
@@ -110,10 +88,10 @@ class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with 
   }
 
   protected def queueMessage(source: String, destination: String, port: Int, answerPort: Int, args: Array[AnyRef]) {
-    for ((computer, wrapper) <- computers) {
-      val address = s"cc${wrapper.id}_${wrapper.attachmentName}"
+    for (computer <- computers.map(_.asInstanceOf[IComputerAccess])) {
+      val address = s"cc${computer.getID}_${computer.getAttachmentName}"
       if (source != address && Option(destination).forall(_ == address) && openPorts(computer).contains(port))
-        wrapper.queueEvent("modem_message", Array(Seq(wrapper.attachmentName, Int.box(port), Int.box(answerPort)) ++ args.map {
+        computer.queueEvent("modem_message", Array(Seq(computer.getAttachmentName, Int.box(port), Int.box(answerPort)) ++ args.map {
           case x: Array[Byte] => new String(x, "UTF-8")
           case x => x
         }: _*))
@@ -193,13 +171,4 @@ class Switch extends traits.Hub with traits.NotAnalyzable with IPeripheral with 
       case stack => updateLimits(slot, stack)
     }
   }
-}
-
-// Abstraction layer for CC computers to support 1.5 and 1.6 API.
-trait ComputerWrapper {
-  def id: Int
-
-  def attachmentName: String
-
-  def queueEvent(name: String, args: Array[AnyRef])
 }

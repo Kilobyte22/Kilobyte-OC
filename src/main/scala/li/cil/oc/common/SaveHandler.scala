@@ -2,15 +2,14 @@ package li.cil.oc.common
 
 import java.io
 import java.io._
-import java.util.logging.Level
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.api.driver.Container
 import li.cil.oc.api.machine.Owner
 import li.cil.oc.{OpenComputers, Settings}
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.world.{ChunkCoordIntPair, World}
 import net.minecraftforge.common.DimensionManager
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.{ChunkDataEvent, WorldEvent}
 
 import scala.collection.mutable
@@ -119,12 +118,12 @@ object SaveHandler {
     }
     catch {
       case e: io.IOException =>
-        OpenComputers.log.log(Level.WARNING, "Error loading auxiliary tile entity data.", e)
+        OpenComputers.log.warn("Error loading auxiliary tile entity data.", e)
         Array.empty[Byte]
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onChunkSave(e: ChunkDataEvent.Save) = saveData.synchronized {
     val path = statePath
     val dimension = e.world.provider.dimensionId
@@ -147,7 +146,7 @@ object SaveHandler {
               fos.close()
             }
             catch {
-              case e: io.IOException => OpenComputers.log.log(Level.WARNING, s"Error saving auxiliary tile entity data to '${file.getAbsolutePath}.", e)
+              case e: io.IOException => OpenComputers.log.warn(s"Error saving auxiliary tile entity data to '${file.getAbsolutePath}.", e)
             }
           }
         case _ => chunkPath.delete()
@@ -156,7 +155,7 @@ object SaveHandler {
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldSave(e: WorldEvent.Save) {
     saveData.synchronized {
       saveData.get(e.world.provider.dimensionId) match {

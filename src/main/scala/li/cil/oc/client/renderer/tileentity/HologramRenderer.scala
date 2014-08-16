@@ -1,11 +1,11 @@
 package li.cil.oc.client.renderer.tileentity
 
 import java.nio.IntBuffer
-import java.util
 import java.util.concurrent.{Callable, TimeUnit}
 
 import com.google.common.cache.{CacheBuilder, RemovalListener, RemovalNotification}
-import cpw.mods.fml.common.{ITickHandler, TickType}
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent
 import li.cil.oc.Settings
 import li.cil.oc.client.Textures
 import li.cil.oc.common.tileentity.Hologram
@@ -17,7 +17,7 @@ import org.lwjgl.opengl.{GL11, GL15}
 
 import scala.util.Random
 
-object HologramRenderer extends TileEntitySpecialRenderer with Callable[Int] with RemovalListener[TileEntity, Int] with ITickHandler {
+object HologramRenderer extends TileEntitySpecialRenderer with Callable[Int] with RemovalListener[TileEntity, Int] {
   private val random = new Random()
 
   /** We cache the VBOs for the projectors we render for performance. */
@@ -331,15 +331,6 @@ object HologramRenderer extends TileEntitySpecialRenderer with Callable[Int] wit
     dataBuffer.clear()
   }
 
-  // ----------------------------------------------------------------------- //
-  // ITickHandler
-  // ----------------------------------------------------------------------- //
-
-  def getLabel = "OpenComputers.Hologram"
-
-  def ticks() = util.EnumSet.of(TickType.CLIENT)
-
-  def tickStart(tickType: util.EnumSet[TickType], tickData: AnyRef*) = cache.cleanUp()
-
-  def tickEnd(tickType: util.EnumSet[TickType], tickData: AnyRef*) {}
+  @SubscribeEvent
+  def onTick(e: ClientTickEvent) = cache.cleanUp()
 }

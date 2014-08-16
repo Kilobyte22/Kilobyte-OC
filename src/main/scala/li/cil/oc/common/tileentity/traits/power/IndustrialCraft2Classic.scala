@@ -6,7 +6,7 @@ import li.cil.oc.Settings
 import li.cil.oc.common.EventHandler
 import li.cil.oc.util.mods.Mods
 import net.minecraft.tileentity.TileEntity
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait IndustrialCraft2Classic extends Common with IndustrialCraft2Common {
   private var lastInjectedAmount = 0.0
@@ -36,6 +36,9 @@ trait IndustrialCraft2Classic extends Common with IndustrialCraft2Common {
   def isAddedToEnergyNet = addedToIC2PowerGrid
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2Classic)
+  def getMaxSafeInput = Integer.MAX_VALUE
+
+  @Optional.Method(modid = Mods.IDs.IndustrialCraft2Classic)
   def acceptsEnergyFrom(emitter: TileEntity, direction: Direction) = Mods.IndustrialCraft2Classic.isAvailable && canConnectPower(direction.toForgeDirection)
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2Classic)
@@ -47,9 +50,9 @@ trait IndustrialCraft2Classic extends Common with IndustrialCraft2Common {
       for (side <- ForgeDirection.VALID_DIRECTIONS if energy > 0) {
         energy -= tryChangeBuffer(side, energy)
       }
-      (energy / Settings.ratioIndustrialCraft2).toInt
+      (energy / Settings.ratioIndustrialCraft2).toInt == 0
     }
-    else (amount - tryChangeBuffer(directionFrom.toForgeDirection, energy) / Settings.ratioIndustrialCraft2).toInt
+    else (amount - tryChangeBuffer(directionFrom.toForgeDirection, energy) / Settings.ratioIndustrialCraft2).toInt == 0
   }
 
   @Optional.Method(modid = Mods.IDs.IndustrialCraft2Classic)

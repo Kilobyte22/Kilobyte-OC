@@ -6,9 +6,9 @@ import li.cil.oc.Settings
 import li.cil.oc.server.{PacketSender => ServerPacketSender}
 import li.cil.oc.util.mods.Mods
 import mods.immibis.redlogic.api.wiring.{IConnectable, IRedstoneEmitter, IRedstoneUpdatable, IWire}
-import net.minecraft.block.Block
+import net.minecraft.init.Blocks
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 @Optional.InterfaceList(Array(
   new Optional.Interface(iface = "mods.immibis.redlogic.api.wiring.IConnectable", modid = Mods.IDs.RedLogic),
@@ -115,9 +115,9 @@ trait RedstoneAware extends RotationAware with IConnectable with IRedstoneEmitte
     val (sx, sy, sz) = (x + side.offsetX, y + side.offsetY, z + side.offsetZ)
     // See BlockRedstoneLogic.getInputStrength() for reference.
     val vanilla = math.max(world.getIndirectPowerLevelTo(sx, sy, sz, side.ordinal()),
-      if (world.getBlockId(sx, sy, sz) == Block.redstoneWire.blockID) world.getBlockMetadata(sx, sy, sz) else 0)
+      if (world.getBlock(sx, sy, sz) == Blocks.redstone_wire) world.getBlockMetadata(sx, sy, sz) else 0)
     val redLogic = if (Mods.RedLogic.isAvailable) {
-      world.getBlockTileEntity(sx, sy, sz) match {
+      world.getTileEntity(sx, sy, sz) match {
         case emitter: IRedstoneEmitter =>
           var strength = 0
           for (i <- -1 to 5) {
@@ -134,20 +134,20 @@ trait RedstoneAware extends RotationAware with IConnectable with IRedstoneEmitte
   protected def onRedstoneInputChanged(side: ForgeDirection) {}
 
   protected def onRedstoneOutputEnabledChanged() {
-    world.notifyBlocksOfNeighborChange(x, y, z, block.blockID)
+    world.notifyBlocksOfNeighborChange(x, y, z, block)
     if (isServer) ServerPacketSender.sendRedstoneState(this)
-    else world.markBlockForRenderUpdate(x, y, z)
+    else world.markBlockForUpdate(x, y, z)
   }
 
   protected def onRedstoneOutputChanged(side: ForgeDirection) {
     val nx = x + side.offsetX
     val ny = y + side.offsetY
     val nz = z + side.offsetZ
-    world.notifyBlockOfNeighborChange(nx, ny, nz, block.blockID)
-    world.notifyBlocksOfNeighborChange(nx, ny, nz, world.getBlockId(nx, ny, nz), side.getOpposite.ordinal)
+    world.notifyBlockOfNeighborChange(nx, ny, nz, block)
+    world.notifyBlocksOfNeighborChange(nx, ny, nz, world.getBlock(nx, ny, nz), side.getOpposite.ordinal)
 
     if (isServer) ServerPacketSender.sendRedstoneState(this)
-    else world.markBlockForRenderUpdate(x, y, z)
+    else world.markBlockForUpdate(x, y, z)
   }
 
   // ----------------------------------------------------------------------- //

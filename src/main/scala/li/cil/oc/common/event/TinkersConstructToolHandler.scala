@@ -1,13 +1,13 @@
 package li.cil.oc.common.event
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.api.event.RobotUsedTool
 import net.minecraft.item.ItemStack
-import net.minecraftforge.event.ForgeSubscribe
 
 object TinkersConstructToolHandler {
   def isTinkerTool(stack: ItemStack) = stack.hasTagCompound && stack.getTagCompound.hasKey("InfiTool")
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotApplyDamageRate(e: RobotUsedTool.ApplyDamageRate) {
     if (isTinkerTool(e.toolBeforeUse)) {
       val nbtBefore = e.toolBeforeUse.getTagCompound.getCompoundTag("InfiTool")

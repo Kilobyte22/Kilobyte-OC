@@ -1,9 +1,9 @@
 package li.cil.oc.common
 
+import cpw.mods.fml.common.FMLCommonHandler
 import cpw.mods.fml.common.event._
 import cpw.mods.fml.common.network.NetworkRegistry
-import cpw.mods.fml.common.registry.{GameRegistry, TickRegistry}
-import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.common.registry.GameRegistry
 import li.cil.oc._
 import li.cil.oc.common.asm.SimpleComponentTickHandler
 import li.cil.oc.common.event._
@@ -11,17 +11,18 @@ import li.cil.oc.common.item.Tablet
 import li.cil.oc.common.multipart.MultiPart
 import li.cil.oc.common.recipe.Recipes
 import li.cil.oc.server._
+import li.cil.oc.server.component.machine
 import li.cil.oc.server.component.machine.{LuaJLuaArchitecture, NativeLuaArchitecture}
-import li.cil.oc.server.component.{Keyboard, machine}
 import li.cil.oc.server.network.WirelessNetwork
 import li.cil.oc.util.LuaStateFactory
-import li.cil.oc.util.mods.{ComputerCraft16, Mods}
-import net.minecraft.block.Block
-import net.minecraft.item.{Item, ItemStack}
+import li.cil.oc.util.mods.{ComputerCraft, Mods}
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
 import net.minecraftforge.common.{ForgeChunkManager, MinecraftForge}
 import net.minecraftforge.oredict.OreDictionary
 
 import scala.collection.convert.WrapAsScala._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class Proxy {
   def preInit(e: FMLPreInitializationEvent) {
@@ -33,15 +34,14 @@ class Proxy {
     Items.init()
 
     OpenComputers.log.info("Initializing additional OreDict entries.")
-
-    registerExclusive("craftingPiston", new ItemStack(Block.pistonBase), new ItemStack(Block.pistonStickyBase))
-    registerExclusive("torchRedstoneActive", new ItemStack(Block.torchRedstoneActive, 1, 0))
-    registerExclusive("nuggetGold", new ItemStack(Item.goldNugget))
+    registerExclusive("craftingPiston", new ItemStack(net.minecraft.init.Blocks.piston), new ItemStack(net.minecraft.init.Blocks.sticky_piston))
+    registerExclusive("torchRedstoneActive", new ItemStack(net.minecraft.init.Blocks.redstone_torch))
+    registerExclusive("nuggetGold", new ItemStack(net.minecraft.init.Items.gold_nugget))
     registerExclusive("nuggetIron", Items.ironNugget.createItemStack())
 
     if (OreDictionary.getOres("nuggetIron").exists(Items.ironNugget.createItemStack().isItemEqual)) {
       Recipes.addItem(Items.ironNugget, "nuggetIron")
-      Recipes.addItem(Item.ingotIron, "ingotIron")
+      Recipes.addItem(net.minecraft.init.Items.iron_ingot, "ingotIron")
     }
 
     OpenComputers.log.info("Initializing OpenComputers API.")
@@ -60,13 +60,16 @@ class Proxy {
       OpenComputers.log.info("Initializing Forge MultiPart support.")
       MultiPart.init()
     }
-    if (Mods.ComputerCraft16.isAvailable) {
+    if (Mods.ComputerCraft.isAvailable) {
       OpenComputers.log.info("Initializing ComputerCraft support.")
-      ComputerCraft16.init()
+      ComputerCraft.init()
     }
   }
 
   def init(e: FMLInitializationEvent) {
+    OpenComputers.channel = NetworkRegistry.INSTANCE.newEventDrivenChannel("OpenComputers")
+    OpenComputers.channel.register(server.PacketHandler)
+
     OpenComputers.log.info("Initializing OpenComputers drivers.")
     api.Driver.add(driver.item.ComponentBus)
     api.Driver.add(driver.item.CPU)
@@ -103,13 +106,9 @@ class Proxy {
       api.Driver.add(driver.converter.BusPacketNetScanDevice)
       api.Driver.add(driver.item.AbstractBusCard)
     }
-    if (Mods.ComputerCraft15.isAvailable) {
-      OpenComputers.log.info("Initializing ComputerCraft 1.5x floppy driver.")
-      api.Driver.add(driver.item.CC15Media)
-    }
-    if (Mods.ComputerCraft16.isAvailable) {
+    if (Mods.ComputerCraft.isAvailable) {
       OpenComputers.log.info("Initializing ComputerCraft 1.6x floppy driver.")
-      api.Driver.add(driver.item.CC16Media)
+      api.Driver.add(driver.item.ComputerCraftMedia)
     }
 
     OpenComputers.log.info("Initializing vanilla converters.")
@@ -124,13 +123,15 @@ class Proxy {
 
     OpenComputers.log.info("Initializing event handlers.")
 
-    GameRegistry.registerCraftingHandler(EventHandler)
-    GameRegistry.registerPlayerTracker(Keyboard)
-
     ForgeChunkManager.setForcedChunkLoadingCallback(OpenComputers, ChunkloaderUpgradeHandler)
+
+    FMLCommonHandler.instance.bus.register(EventHandler)
+    FMLCommonHandler.instance.bus.register(SimpleComponentTickHandler.Instance)
+    FMLCommonHandler.instance.bus.register(Tablet)
 
     MinecraftForge.EVENT_BUS.register(AngelUpgradeHandler)
     MinecraftForge.EVENT_BUS.register(ChunkloaderUpgradeHandler)
+    MinecraftForge.EVENT_BUS.register(EventHandler)
     MinecraftForge.EVENT_BUS.register(ExperienceUpgradeHandler)
     MinecraftForge.EVENT_BUS.register(Loot)
     MinecraftForge.EVENT_BUS.register(RobotCommonHandler)
@@ -139,14 +140,7 @@ class Proxy {
     MinecraftForge.EVENT_BUS.register(WirelessNetwork)
     MinecraftForge.EVENT_BUS.register(WirelessNetworkCardHandler)
 
-    NetworkRegistry.instance.registerConnectionHandler(EventHandler)
-
-    TickRegistry.registerTickHandler(EventHandler, Side.SERVER)
-    TickRegistry.registerTickHandler(SimpleComponentTickHandler.Instance, Side.SERVER)
-    TickRegistry.registerTickHandler(Tablet, Side.CLIENT)
-    TickRegistry.registerTickHandler(Tablet, Side.SERVER)
-
-    if (Mods.ThermalExpansion.isAvailable) {
+    if (Mods.RedstoneFlux.isAvailable) {
       OpenComputers.log.info("Initializing Redstone Flux tool support.")
       MinecraftForge.EVENT_BUS.register(RedstoneFluxToolHandler)
     }
@@ -157,6 +151,19 @@ class Proxy {
     if (Mods.UniversalElectricity.isAvailable) {
       OpenComputers.log.info("Initializing electric tool support.")
       MinecraftForge.EVENT_BUS.register(UniversalElectricityToolHandler)
+    }
+    if (Mods.VersionChecker.isAvailable) {
+      UpdateCheck.info onSuccess {
+        case Some(release) =>
+          val nbt = new NBTTagCompound()
+          nbt.setString("newVersion", release.tag_name)
+          nbt.setString("updateUrl", "https://github.com/MightyPirates/OpenComputers/releases")
+          nbt.setBoolean("isDirectLink", false)
+          if (release.body != null) {
+            nbt.setString("changeLog", release.body.replaceAll("\r\n", "\n"))
+          }
+          FMLInterModComms.sendRuntimeMessage(OpenComputers.ID, Mods.IDs.VersionChecker, "addUpdate", nbt)
+      }
     }
     if (Mods.Waila.isAvailable) {
       OpenComputers.log.info("Initializing Waila support.")
@@ -174,6 +181,45 @@ class Proxy {
       for (item <- items) {
         OreDictionary.registerOre(name, item)
       }
+    }
+  }
+
+  // Yes, this could be boiled down even further, but I like to keep it
+  // explicit like this, because it makes it a) clearer, b) easier to
+  // extend, in case that should ever be needed.
+
+  private val blockRenames = Map(
+    OpenComputers.ID + ":" + Settings.namespace + "simple" -> "simple",
+    OpenComputers.ID + ":" + Settings.namespace + "simple_redstone" -> "simple_redstone",
+    OpenComputers.ID + ":" + Settings.namespace + "special" -> "special",
+    OpenComputers.ID + ":" + Settings.namespace + "special_redstone" -> "special_redstone",
+    OpenComputers.ID + ":" + Settings.namespace + "keyboard" -> "keyboard"
+  )
+
+  private val itemRenames = Map(
+    OpenComputers.ID + ":" + Settings.namespace + "item" -> "item",
+    OpenComputers.ID + ":" + Settings.namespace + "simple" -> "simple",
+    OpenComputers.ID + ":" + Settings.namespace + "simple_redstone" -> "simple_redstone",
+    OpenComputers.ID + ":" + Settings.namespace + "special" -> "special",
+    OpenComputers.ID + ":" + Settings.namespace + "special_redstone" -> "special_redstone",
+    OpenComputers.ID + ":" + Settings.namespace + "keyboard" -> "keyboard"
+  )
+
+  def missingMappings(e: FMLMissingMappingsEvent) {
+    for (missing <- e.get()) {
+      if (missing.`type` == GameRegistry.Type.BLOCK) {
+        blockRenames.get(missing.name) match {
+          case Some(name) => missing.remap(GameRegistry.findBlock(OpenComputers.ID, name))
+          case _ => missing.fail()
+        }
+      }
+      else if (missing.`type` == GameRegistry.Type.ITEM) {
+        itemRenames.get(missing.name) match {
+          case Some(name) => missing.remap(GameRegistry.findItem(OpenComputers.ID, name))
+          case _ => missing.fail()
+        }
+      }
+      else missing.fail()
     }
   }
 }

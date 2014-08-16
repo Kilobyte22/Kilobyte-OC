@@ -1,24 +1,16 @@
 package li.cil.oc
 
-import java.util.logging.Logger
-
 import cpw.mods.fml.common.Mod.EventHandler
-import cpw.mods.fml.common.{Mod, SidedProxy}
 import cpw.mods.fml.common.event._
-import cpw.mods.fml.common.network.NetworkMod
-import cpw.mods.fml.common.network.NetworkMod._
-import li.cil.oc.client.{PacketHandler => ClientPacketHandler}
+import cpw.mods.fml.common.network.FMLEventChannel
+import cpw.mods.fml.common.{Mod, SidedProxy}
 import li.cil.oc.common.Proxy
-import li.cil.oc.server.{CommandHandler, PacketHandler => ServerPacketHandler}
+import li.cil.oc.server.CommandHandler
+import org.apache.logging.log4j.LogManager
 
 @Mod(modid = OpenComputers.ID, name = OpenComputers.Name,
   version = OpenComputers.Version, /* certificateFingerprint = OpenComputers.Fingerprint, */
   modLanguage = "scala", useMetadata = true)
-@NetworkMod(clientSideRequired = true, serverSideRequired = false,
-  clientPacketHandlerSpec = new SidedPacketHandler(
-    channels = Array("OpenComp"), packetHandler = classOf[ClientPacketHandler]),
-  serverPacketHandlerSpec = new SidedPacketHandler(
-    channels = Array("OpenComp"), packetHandler = classOf[ServerPacketHandler]))
 object OpenComputers {
   final val ID = "OpenComputers"
 
@@ -28,15 +20,17 @@ object OpenComputers {
 
   final val Fingerprint = "@FINGERPRINT@"
 
-  val log = Logger.getLogger("OpenComputers")
+  val log = LogManager.getLogger("OpenComputers")
 
   @SidedProxy(clientSide = "li.cil.oc.client.Proxy", serverSide = "li.cil.oc.server.Proxy")
   var proxy: Proxy = null
 
+  var channel: FMLEventChannel = _
+
   var tampered: Option[FMLFingerprintViolationEvent] = None
 
-  //  @EventHandler
-  //  def invalidFingerprint(e: FMLFingerprintViolationEvent) = tampered = Some(e)
+//  @EventHandler
+//  def invalidFingerprint(e: FMLFingerprintViolationEvent) = tampered = Some(e)
 
   @EventHandler
   def preInit(e: FMLPreInitializationEvent) = proxy.preInit(e)
@@ -46,6 +40,9 @@ object OpenComputers {
 
   @EventHandler
   def postInit(e: FMLPostInitializationEvent) = proxy.postInit(e)
+
+  @EventHandler
+  def missingMappings(e: FMLMissingMappingsEvent) = proxy.missingMappings(e)
 
   @EventHandler
   def serverStart(e: FMLServerStartingEvent) = CommandHandler.register(e)

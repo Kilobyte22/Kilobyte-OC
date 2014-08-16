@@ -26,7 +26,7 @@ object CommandHandler {
     override def processCommand(source: ICommandSender, command: Array[String]) {
       Settings.rTreeDebugRenderer =
         if (command != null && command.length > 0)
-          CommandBase.func_110662_c(source, command(0))
+          CommandBase.parseBoolean(source, command(0))
         else
           !Settings.rTreeDebugRenderer
     }

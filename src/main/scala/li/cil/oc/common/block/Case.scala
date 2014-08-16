@@ -12,7 +12,7 @@ import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.{EnumRarity, ItemStack}
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Case(val parent: SimpleDelegator, val tier: Int) extends RedstoneAware with SimpleDelegate {
   override val unlocalizedName = super.unlocalizedName + tier
@@ -48,12 +48,12 @@ class Case(val parent: SimpleDelegator, val tier: Int) extends RedstoneAware wit
     val nbt = accessor.getNBTData
     val node = nbt.getCompoundTag(Settings.namespace + "computer").getCompoundTag("node")
     if (node.hasKey("address")) {
-      tooltip.add(Localization.Analyzer.Address(node.getString("address")).toString)
+      tooltip.add(Localization.Analyzer.Address(node.getString("address")).getUnformattedTextForChat)
     }
   }
 
   override def icon(world: IBlockAccess, x: Int, y: Int, z: Int, worldSide: ForgeDirection, localSide: ForgeDirection) = {
-    getIcon(localSide, world.getBlockTileEntity(x, y, z) match {
+    getIcon(localSide, world.getTileEntity(x, y, z) match {
       case computer: tileentity.Case => computer.isRunning
       case _ => false
     })
@@ -88,7 +88,7 @@ class Case(val parent: SimpleDelegator, val tier: Int) extends RedstoneAware wit
     }
     else if (player.getCurrentEquippedItem == null) {
       if (!world.isRemote) {
-        world.getBlockTileEntity(x, y, z) match {
+        world.getTileEntity(x, y, z) match {
           case computer: tileentity.Case if !computer.isRunning => computer.start()
           case _ =>
         }
@@ -99,7 +99,7 @@ class Case(val parent: SimpleDelegator, val tier: Int) extends RedstoneAware wit
   }
 
   override def removedByEntity(world: World, x: Int, y: Int, z: Int, player: EntityPlayer) =
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case c: tileentity.Case => c.canInteract(player.getCommandSenderName)
       case _ => super.removedByEntity(world, x, y, z, player)
     }

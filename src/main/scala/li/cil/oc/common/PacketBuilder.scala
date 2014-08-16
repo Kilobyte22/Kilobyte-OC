@@ -4,15 +4,16 @@ import java.io.{ByteArrayOutputStream, DataOutputStream, OutputStream}
 import java.util.zip.GZIPOutputStream
 
 import cpw.mods.fml.common.FMLCommonHandler
-import cpw.mods.fml.common.network.{PacketDispatcher, Player}
+import cpw.mods.fml.common.network.internal.FMLProxyPacket
+import io.netty.buffer.Unpooled
+import li.cil.oc.OpenComputers
 import li.cil.oc.api.driver.Container
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
-import net.minecraft.network.packet.Packet250CustomPayload
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.convert.WrapAsScala._
 
@@ -37,7 +38,7 @@ abstract class PacketBuilderBase[T <: OutputStream](protected val stream: T) ext
 
   def writeNBT(nbt: NBTTagCompound) = CompressedStreamTools.writeCompressed(nbt, this)
 
-  def sendToAllPlayers() = PacketDispatcher.sendPacketToAllPlayers(packet)
+  def sendToAllPlayers() = OpenComputers.channel.sendToAll(packet)
 
   def sendToNearbyPlayers(t: TileEntity, range: Double = 1024): Unit = sendToNearbyPlayers(t.getWorldObj, t.xCoord + 0.5, t.yCoord + 0.5, t.zCoord + 0.5, range)
 
@@ -56,22 +57,18 @@ abstract class PacketBuilderBase[T <: OutputStream](protected val stream: T) ext
     }
   }
 
-  def sendToPlayer(player: EntityPlayerMP) = PacketDispatcher.sendPacketToPlayer(packet, player.asInstanceOf[Player])
+  def sendToPlayer(player: EntityPlayerMP) = OpenComputers.channel.sendTo(packet, player)
 
-  def sendToServer() = PacketDispatcher.sendPacketToServer(packet)
+  def sendToServer() = OpenComputers.channel.sendToServer(packet)
 
-  protected def packet: Packet250CustomPayload
+  protected def packet: FMLProxyPacket
 }
 
 class PacketBuilder(packetType: PacketType.Value) extends PacketBuilderBase(PacketBuilder.newData(compressed = false)) {
   writeByte(packetType.id)
 
   override protected def packet = {
-    val p = new Packet250CustomPayload
-    p.channel = "OpenComp"
-    p.data = stream.toByteArray
-    p.length = stream.size
-    p
+    new FMLProxyPacket(Unpooled.wrappedBuffer(stream.toByteArray), "OpenComputers")
   }
 }
 
@@ -80,11 +77,7 @@ class CompressedPacketBuilder(packetType: PacketType.Value, private val data: By
 
   override protected def packet = {
     stream.finish()
-    val p = new Packet250CustomPayload
-    p.channel = "OpenComp"
-    p.data = data.toByteArray
-    p.length = data.size
-    p
+    new FMLProxyPacket(Unpooled.wrappedBuffer(data.toByteArray), "OpenComputers")
   }
 }
 

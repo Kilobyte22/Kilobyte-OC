@@ -1,10 +1,10 @@
 package li.cil.oc.client
 
 import li.cil.oc.Settings
-import net.minecraft.client.resources.{ResourceManager, ResourceManagerReloadListener}
-import net.minecraft.util.{Icon, ResourceLocation}
+import net.minecraft.client.renderer.texture.TextureManager
+import net.minecraft.util.{IIcon, ResourceLocation}
 
-object Textures extends ResourceManagerReloadListener {
+object Textures {
   val fontAntiAliased = new ResourceLocation(Settings.resourceDomain, "textures/font/chars.png")
   val fontAliased = new ResourceLocation(Settings.resourceDomain, "textures/font/chars_aliased.png")
 
@@ -39,67 +39,68 @@ object Textures extends ResourceManagerReloadListener {
   val upgradeInventory = new ResourceLocation(Settings.resourceDomain, "textures/model/UpgradeInventory.png")
 
   object Cable {
-    var iconCap: Icon = _
+    var iconCap: IIcon = _
   }
 
   object Charger {
-    var iconFrontCharging: Icon = _
-    var iconSideCharging: Icon = _
+    var iconFrontCharging: IIcon = _
+    var iconSideCharging: IIcon = _
   }
 
   object Disassembler {
-    var iconSideOn: Icon = _
-    var iconTopOn: Icon = _
+    var iconSideOn: IIcon = _
+    var iconTopOn: IIcon = _
   }
 
   object Geolyzer {
-    var iconTopOn: Icon = _
+    var iconTopOn: IIcon = _
   }
 
   object PowerDistributor {
-    var iconSideOn: Icon = _
-    var iconTopOn: Icon = _
+    var iconSideOn: IIcon = _
+    var iconTopOn: IIcon = _
   }
 
   object ServerRack {
-    val icons = Array.fill[Icon](6)(null)
+    val icons = Array.fill[IIcon](6)(null)
   }
 
   object RobotAssembler {
-    var iconSideAssembling: Icon = _
-    var iconSideOn: Icon = _
-    var iconTopOn: Icon = _
+    var iconSideAssembling: IIcon = _
+    var iconSideOn: IIcon = _
+    var iconTopOn: IIcon = _
   }
 
   object Switch {
-    var iconSideActivity: Icon = _
+    var iconSideActivity: IIcon = _
   }
 
-  def onResourceManagerReload(manager: ResourceManager) {
-    manager.getResource(fontAntiAliased)
-    manager.getResource(fontAliased)
+  def init(tm: TextureManager) {
+    tm.bindTexture(fontAntiAliased)
+    tm.bindTexture(fontAliased)
 
-    manager.getResource(guiBackground)
-    manager.getResource(guiBar)
-    manager.getResource(guiBorders)
-    manager.getResource(guiButtonPower)
-    manager.getResource(guiButtonRange)
-    manager.getResource(guiButtonRun)
-    manager.getResource(guiButtonSide)
-    manager.getResource(guiComputer)
-    manager.getResource(guiRange)
-    manager.getResource(guiRobot)
-    manager.getResource(guiRobotAssembler)
-    manager.getResource(guiRobotSelection)
-    manager.getResource(guiServer)
-    manager.getResource(guiSlot)
+    tm.bindTexture(guiBackground)
+    tm.bindTexture(guiBar)
+    tm.bindTexture(guiBorders)
+    tm.bindTexture(guiButtonPower)
+    tm.bindTexture(guiButtonRange)
+    tm.bindTexture(guiButtonRun)
+    tm.bindTexture(guiButtonSide)
+    tm.bindTexture(guiComputer)
+    tm.bindTexture(guiRange)
+    tm.bindTexture(guiRobot)
+    tm.bindTexture(guiRobotAssembler)
+    tm.bindTexture(guiRobotSelection)
+    tm.bindTexture(guiServer)
+    tm.bindTexture(guiSlot)
 
-    manager.getResource(blockCaseFrontOn)
-    manager.getResource(blockRackFrontOn)
-    manager.getResource(blockRobot)
-    manager.getResource(blockScreenUpIndicator)
+    tm.bindTexture(blockCaseFrontOn)
+    tm.bindTexture(blockHologram)
+    tm.bindTexture(blockRackFrontOn)
+    tm.bindTexture(blockRobot)
+    tm.bindTexture(blockScreenUpIndicator)
 
-    manager.getResource(upgradeCrafting)
-    manager.getResource(upgradeGenerator)
+    tm.bindTexture(upgradeCrafting)
+    tm.bindTexture(upgradeGenerator)
   }
 }

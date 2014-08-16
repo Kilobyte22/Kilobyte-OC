@@ -13,7 +13,7 @@ object IndustrialCraft2 {
   }
 
   def isMiningLaser(stack: ItemStack) = stack != null && Mods.IndustrialCraft2.isAvailable && (miningLaser match {
-    case Some(laser) => laser.itemID == stack.itemID
+    case Some(laser) => laser.getItem == stack.getItem
     case _ => false
   })
 }

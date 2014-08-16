@@ -1,5 +1,7 @@
 package li.cil.oc.common.multipart
 
+import java.util
+
 import codechicken.lib.vec.BlockCoord
 import codechicken.multipart.MultiPartRegistry.{IPartConverter, IPartFactory}
 import codechicken.multipart.{MultiPartRegistry, TMultiPart}
@@ -22,12 +24,10 @@ object MultiPart extends IPartFactory with IPartConverter {
     null
   }
 
-  override def canConvert(blockID: Int): Boolean = {
-    blockID == Items.get("cable").block.blockID
-  }
+  override def blockTypes = util.Arrays.asList(Items.get("cable").block)
 
   override def convert(world: World, pos: BlockCoord) = {
-    world.getBlockTileEntity(pos.x, pos.y, pos.z) match {
+    world.getTileEntity(pos.x, pos.y, pos.z) match {
       case cable: Cable => new CablePart(Some(cable.node))
       case _ => null
     }

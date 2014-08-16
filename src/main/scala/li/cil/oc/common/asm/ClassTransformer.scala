@@ -1,12 +1,11 @@
 package li.cil.oc.common.asm
 
-import java.util.logging.{Level, Logger}
-
 import cpw.mods.fml.common.asm.transformers.deobf.FMLDeobfuscatingRemapper
 import li.cil.oc.common.asm.template.SimpleComponentImpl
 import li.cil.oc.util.mods.Mods
 import li.cil.oc.util.mods.Mods.Mod
 import net.minecraft.launchwrapper.{IClassTransformer, LaunchClassLoader}
+import org.apache.logging.log4j.LogManager
 import org.objectweb.asm.tree._
 import org.objectweb.asm.{ClassReader, ClassWriter, Opcodes}
 
@@ -16,16 +15,17 @@ import scala.collection.convert.WrapAsScala._
 class ClassTransformer extends IClassTransformer {
   private val loader = classOf[ClassTransformer].getClassLoader.asInstanceOf[LaunchClassLoader]
 
-  private val log = Logger.getLogger("OpenComputers")
+  private val log = LogManager.getLogger("OpenComputers")
 
   private lazy val powerTypes = Map[Mod, Array[String]](
     Mods.BuildCraftPower -> Array("buildcraft/api/power/IPowerReceptor"),
     Mods.Factorization -> Array("factorization/api/IChargeConductor"),
+    Mods.Galacticraft -> Array("micdoodle8/mods/galacticraft/api/power/IEnergyHandlerGC"),
     Mods.IndustrialCraft2 -> Array("ic2/api/energy/tile/IEnergySink"),
     Mods.IndustrialCraft2Classic -> Array("ic2classic/api/energy/tile/IEnergySink"),
     Mods.Mekanism -> Array("mekanism/api/energy/IStrictEnergyAcceptor"),
-    Mods.ThermalExpansion -> Array("cofh/api/energy/IEnergyHandler"),
-    Mods.UniversalElectricity -> Array("universalelectricity/api/energy/IEnergyInterface", "universalelectricity/api/energy/IEnergyContainer")
+    Mods.RedstoneFlux -> Array("cofh/api/energy/IEnergyHandler")
+//    Mods.UniversalElectricity -> Array("universalelectricity/api/core/grid/INodeProvider", "universalelectricity/api/core/grid/electric/IEnergyContainer")
   )
 
   override def transform(name: String, transformedName: String, basicClass: Array[Byte]): Array[Byte] = {
@@ -45,20 +45,20 @@ class ClassTransformer extends IClassTransformer {
           val classNode = newClassNode(transformedClass)
           val missingInterfaces = classNode.interfaces.filter(!classExists(_))
           for (interfaceName <- missingInterfaces) {
-            log.fine(s"Stripping interface $interfaceName from class $name because it is missing.")
+            log.trace(s"Stripping interface $interfaceName from class $name because it is missing.")
           }
           classNode.interfaces.removeAll(missingInterfaces)
 
           val missingClasses = classNode.innerClasses.filter(clazz => clazz.outerName != null && !classExists(clazz.outerName))
           for (innerClass <- missingClasses) {
-            log.fine(s"Stripping inner class ${innerClass.name} from class $name because its type ${innerClass.outerName} is missing.")
+            log.trace(s"Stripping inner class ${innerClass.name} from class $name because its type ${innerClass.outerName} is missing.")
           }
           classNode.innerClasses.removeAll(missingClasses)
 
           val incompleteMethods = classNode.methods.filter(method => missingFromSignature(method.desc).nonEmpty)
           for (method <- incompleteMethods) {
             val missing = missingFromSignature(method.desc).mkString(", ")
-            log.fine(s"Stripping method ${method.name} from class $name because the following types in its signature are missing: $missing")
+            log.trace(s"Stripping method ${method.name} from class $name because the following types in its signature are missing: $missing")
           }
           classNode.methods.removeAll(incompleteMethods)
 
@@ -75,8 +75,8 @@ class ClassTransformer extends IClassTransformer {
                 interfaces.foreach(classNode.interfaces.add)
               }
               else {
-                log.warning(s"Skipping power support for mod ${mod.id}.")
-                missing.foreach(log.warning)
+                log.warn(s"Skipping power support for mod ${mod.id}.")
+                missing.foreach(log.warn)
               }
             }
           }
@@ -92,7 +92,7 @@ class ClassTransformer extends IClassTransformer {
             }
             catch {
               case e: Throwable =>
-                log.log(Level.WARNING, s"Failed injecting component logic into class $name.", e)
+                log.warn(s"Failed injecting component logic into class $name.", e)
             }
           }
         }
@@ -101,7 +101,7 @@ class ClassTransformer extends IClassTransformer {
     }
     catch {
       case t: Throwable =>
-        log.log(Level.WARNING, "Something went wrong!", t)
+        log.warn("Something went wrong!", t)
         basicClass
     }
   }
@@ -129,7 +129,7 @@ class ClassTransformer extends IClassTransformer {
   }
 
   def injectEnvironmentImplementation(classNode: ClassNode): Array[Byte] = {
-    log.fine(s"Injecting methods from Environment interface into ${classNode.name}.")
+    log.trace(s"Injecting methods from Environment interface into ${classNode.name}.")
     if (!isTileEntity(classNode)) {
       throw new InjectionFailedException("Found SimpleComponent on something that isn't a tile entity, ignoring.")
     }
@@ -156,7 +156,7 @@ class ClassTransformer extends IClassTransformer {
     inject("onDisconnect", "(Lli/cil/oc/api/network/Node;)V")
     inject("onMessage", "(Lli/cil/oc/api/network/Message;)V")
 
-    log.fine("Injecting / wrapping overrides for required tile entity methods.")
+    log.trace("Injecting / wrapping overrides for required tile entity methods.")
     def replace(methodName: String, methodNameSrg: String, desc: String) {
       val mapper = FMLDeobfuscatingRemapper.INSTANCE
       def filter(method: MethodNode) = {
@@ -171,10 +171,10 @@ class ClassTransformer extends IClassTransformer {
       }
       classNode.methods.find(filter) match {
         case Some(method) =>
-          log.fine(s"Found original implementation of '$methodName', wrapping.")
+          log.trace(s"Found original implementation of '$methodName', wrapping.")
           method.name = methodName + SimpleComponentImpl.PostFix
         case _ =>
-          log.fine(s"No original implementation of '$methodName', will inject override.")
+          log.trace(s"No original implementation of '$methodName', will inject override.")
           def ensureNonFinalIn(name: String) {
             if (name != null) {
               val node = classNodeFor(name)
@@ -201,13 +201,13 @@ class ClassTransformer extends IClassTransformer {
         case _ => throw new AssertionError(s"Couldn't find '$methodName' in template implementation.")
       }
     }
-    replace("validate", "func_70312_q", "()V")
-    replace("invalidate", "func_70313_j", "()V")
-    replace("onChunkUnload", "func_76631_c", "()V")
-    replace("readFromNBT", "func_70307_a", "(Lnet/minecraft/nbt/NBTTagCompound;)V")
-    replace("writeToNBT", "func_70310_b", "(Lnet/minecraft/nbt/NBTTagCompound;)V")
+    replace("validate", "func_145829_t", "()V")
+    replace("invalidate", "func_145843_s", "()V")
+    replace("onChunkUnload", "func_76623_d", "()V")
+    replace("readFromNBT", "func_145839_a", "(Lnet/minecraft/nbt/NBTTagCompound;)V")
+    replace("writeToNBT", "func_145841_b", "(Lnet/minecraft/nbt/NBTTagCompound;)V")
 
-    log.fine("Injecting interface.")
+    log.trace("Injecting interface.")
     classNode.interfaces.add("li/cil/oc/common/asm/template/SimpleComponentImpl")
 
     writeClass(classNode, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES)
@@ -219,7 +219,7 @@ class ClassTransformer extends IClassTransformer {
   def isTileEntity(classNode: ClassNode): Boolean = {
     if (classNode == null) false
     else {
-      log.finer(s"Checking if class ${classNode.name} is a TileEntity...")
+      log.trace(s"Checking if class ${classNode.name} is a TileEntity...")
       classNode.name == tileEntityNamePlain || classNode.name == tileEntityNameObfed ||
         (classNode.superName != null && isTileEntity(classNodeFor(classNode.superName)))
     }

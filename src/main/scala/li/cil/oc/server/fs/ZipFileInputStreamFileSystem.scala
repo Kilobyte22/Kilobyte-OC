@@ -3,7 +3,6 @@ package li.cil.oc.server.fs
 import java.io
 import java.io.ByteArrayInputStream
 import java.util.concurrent.Callable
-import java.util.logging.Level
 import java.util.zip.{ZipEntry, ZipFile}
 
 import com.google.common.cache.CacheBuilder
@@ -127,7 +126,7 @@ object ZipFileInputStreamFileSystem {
     }
     catch {
       case e: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Failed creating ZIP file system.", e)
+        OpenComputers.log.warn("Failed creating ZIP file system.", e)
         null
     }
   }

@@ -1,10 +1,11 @@
 package li.cil.oc.common
 
-import java.util
-import java.util.logging.Level
-
-import cpw.mods.fml.common._
-import cpw.mods.fml.common.network.{IConnectionHandler, Player}
+import cpw.mods.fml.common.Optional
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.PlayerEvent._
+import cpw.mods.fml.common.gameevent.TickEvent
+import cpw.mods.fml.common.gameevent.TickEvent.ServerTickEvent
+import cpw.mods.fml.common.network.FMLNetworkEvent.ClientConnectedToServerEvent
 import li.cil.oc._
 import li.cil.oc.api.Network
 import li.cil.oc.client.renderer.PetRenderer
@@ -14,11 +15,8 @@ import li.cil.oc.server.{PacketSender => ServerPacketSender}
 import li.cil.oc.util.mods.Mods
 import li.cil.oc.util.{LuaStateFactory, SideTracker, mods}
 import net.minecraft.client.Minecraft
-import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
-import net.minecraft.inventory.IInventory
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
-import net.minecraft.network.packet.{NetHandler, Packet1Login}
-import net.minecraft.network.{INetworkManager, NetLoginHandler}
 import net.minecraft.server.MinecraftServer
 import net.minecraft.tileentity.TileEntity
 import net.minecraftforge.common.MinecraftForge
@@ -27,7 +25,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object EventHandler extends ITickHandler with IConnectionHandler with ICraftingHandler {
+object EventHandler {
   val pending = mutable.Buffer.empty[() => Unit]
 
   def schedule(tileEntity: TileEntity) {
@@ -92,46 +90,42 @@ object EventHandler extends ITickHandler with IConnectionHandler with ICraftingH
     }
   }
 
-  override def getLabel = "OpenComputers Network Initialization Ticker"
-
-  override def ticks() = util.EnumSet.of(TickType.SERVER)
-
-  override def tickStart(`type`: util.EnumSet[TickType], tickData: AnyRef*) {
+  @SubscribeEvent
+  def onTick(e: ServerTickEvent) = if (e.phase == TickEvent.Phase.START) {
     pending.synchronized {
       val adds = pending.toArray
       pending.clear()
       adds
     } foreach (callback => {
       try callback() catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Error in scheduled tick action.", t)
+        case t: Throwable => OpenComputers.log.warn("Error in scheduled tick action.", t)
       }
     })
   }
 
-  override def tickEnd(`type`: util.EnumSet[TickType], tickData: AnyRef*) = {}
-
-  def playerLoggedIn(player: Player, netHandler: NetHandler, manager: INetworkManager) {
-    if (netHandler.isServerHandler) player match {
-      case p: EntityPlayerMP =>
+  @SubscribeEvent
+  def playerLoggedIn(e: PlayerLoggedInEvent) {
+    if (SideTracker.isServer) e.player match {
+      case player: EntityPlayerMP =>
         if (!LuaStateFactory.isAvailable) {
-          p.sendChatToPlayer(Localization.Chat.WarningLuaFallback)
+          player.addChatMessage(Localization.Chat.WarningLuaFallback)
         }
         if (Mods.ProjectRedTransmission.isAvailable && !mods.ProjectRed.isAPIAvailable) {
-          p.sendChatToPlayer(Localization.Chat.WarningProjectRed)
+          player.addChatMessage(Localization.Chat.WarningProjectRed)
         }
         if (!Settings.get.pureIgnorePower && Settings.get.ignorePower) {
-          p.sendChatToPlayer(Localization.Chat.WarningPower)
+          player.addChatMessage(Localization.Chat.WarningPower)
         }
         OpenComputers.tampered match {
-          case Some(event) => p.sendChatToPlayer(Localization.Chat.WarningFingerprint(event))
+          case Some(event) => player.addChatMessage(Localization.Chat.WarningFingerprint(event))
           case _ =>
         }
-        ServerPacketSender.sendPetVisibility(None, Some(p))
+        ServerPacketSender.sendPetVisibility(None, Some(player))
         // Do update check in local games and for OPs.
-        if (!MinecraftServer.getServer.isDedicatedServer || MinecraftServer.getServer.getConfigurationManager.isPlayerOpped(p.getCommandSenderName)) {
+        if (!Mods.VersionChecker.isAvailable && (!MinecraftServer.getServer.isDedicatedServer || MinecraftServer.getServer.getConfigurationManager.func_152596_g(player.getGameProfile))) {
           Future {
             UpdateCheck.info onSuccess {
-              case Some(release) => p.sendChatToPlayer(Localization.Chat.InfoNewVersion(release.tag_name))
+              case Some(release) => player.addChatMessage(Localization.Chat.InfoNewVersion(release.tag_name))
             }
           }
         }
@@ -139,46 +133,32 @@ object EventHandler extends ITickHandler with IConnectionHandler with ICraftingH
     }
   }
 
-  def connectionReceived(netHandler: NetLoginHandler, manager: INetworkManager) = null
-
-  def connectionOpened(netClientHandler: NetHandler, server: String, port: Int, manager: INetworkManager) {
-  }
-
-  def connectionOpened(netClientHandler: NetHandler, server: MinecraftServer, manager: INetworkManager) {
-  }
-
-  def connectionClosed(manager: INetworkManager) {
-  }
-
-  def clientLoggedIn(clientHandler: NetHandler, manager: INetworkManager, login: Packet1Login) {
-    val player = clientHandler.getPlayer
-    if (player == Minecraft.getMinecraft.thePlayer) {
-      PetRenderer.hidden.clear()
-      if (Settings.get.hideOwnPet) {
-        PetRenderer.hidden += player.getCommandSenderName
-      }
-      ClientPacketSender.sendPetVisibility()
+  @SubscribeEvent
+  def clientLoggedIn(e: ClientConnectedToServerEvent) {
+    PetRenderer.hidden.clear()
+    if (Settings.get.hideOwnPet) {
+      PetRenderer.hidden += Minecraft.getMinecraft.thePlayer.getCommandSenderName
     }
+    ClientPacketSender.sendPetVisibility()
   }
 
   lazy val navigationUpgrade = api.Items.get("navigationUpgrade")
 
-  override def onCrafting(player: EntityPlayer, craftedStack: ItemStack, inventory: IInventory) = {
-    if (api.Items.get(craftedStack) == navigationUpgrade) {
-      Option(api.Driver.driverFor(craftedStack)).foreach(driver =>
-        for (i <- 0 until inventory.getSizeInventory) {
-          val stack = inventory.getStackInSlot(i)
+  @SubscribeEvent
+  def onCrafting(e: ItemCraftedEvent) = {
+    if (api.Items.get(e.crafting) == navigationUpgrade) {
+      Option(api.Driver.driverFor(e.crafting)).foreach(driver =>
+        for (i <- 0 until e.craftMatrix.getSizeInventory) {
+          val stack = e.craftMatrix.getStackInSlot(i)
           if (stack != null && api.Items.get(stack) == navigationUpgrade) {
             // Restore the map currently used in the upgrade.
             val nbt = driver.dataTag(stack)
             val map = ItemStack.loadItemStackFromNBT(nbt.getCompoundTag(Settings.namespace + "map"))
-            if (!player.inventory.addItemStackToInventory(map)) {
-              player.dropPlayerItemWithRandomChoice(map, false)
+            if (!e.player.inventory.addItemStackToInventory(map)) {
+              e.player.dropPlayerItemWithRandomChoice(map, false)
             }
           }
         })
     }
   }
-
-  override def onSmelting(player: EntityPlayer, item: ItemStack) {}
 }

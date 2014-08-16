@@ -3,7 +3,7 @@ package li.cil.oc.util
 import li.cil.oc.api.machine.Robot
 import li.cil.oc.api.network.Arguments
 import net.minecraft.inventory.IInventory
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.language.implicitConversions
 

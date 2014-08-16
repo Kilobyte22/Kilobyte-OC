@@ -1,23 +1,29 @@
 package li.cil.oc.server
 
-import cpw.mods.fml.common.network.Player
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.network.FMLNetworkEvent.ServerCustomPacketEvent
 import li.cil.oc.api.machine.Machine
 import li.cil.oc.common.component.TextBuffer
 import li.cil.oc.common.multipart.EventHandler
 import li.cil.oc.common.tileentity._
 import li.cil.oc.common.tileentity.traits.{Computer, TileEntity}
 import li.cil.oc.common.{PacketType, PacketHandler => CommonPacketHandler}
-import li.cil.oc.{Settings, api}
+import li.cil.oc.{Localization, Settings, api}
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.util.ChatMessageComponent
-import net.minecraftforge.common.{DimensionManager, ForgeDirection}
+import net.minecraft.network.NetHandlerPlayServer
+import net.minecraftforge.common.DimensionManager
+import net.minecraftforge.common.util.ForgeDirection
 
-class PacketHandler extends CommonPacketHandler {
-  override protected def world(player: Player, dimension: Int) =
+object PacketHandler extends CommonPacketHandler {
+  @SubscribeEvent
+  def onPacket(e: ServerCustomPacketEvent) =
+    onPacketData(e.packet.payload, e.handler.asInstanceOf[NetHandlerPlayServer].playerEntity)
+
+  override protected def world(player: EntityPlayer, dimension: Int) =
     Option(DimensionManager.getWorld(dimension))
 
-  override def dispatch(p: PacketParser) =
+  override def dispatch(p: PacketParser) {
     p.packetType match {
       case PacketType.ComputerPower => onComputerPower(p)
       case PacketType.KeyDown => onKeyDown(p)
@@ -36,6 +42,7 @@ class PacketHandler extends CommonPacketHandler {
       case PacketType.TextBufferInit => onTextBufferInit(p)
       case _ => // Invalid packet.
     }
+  }
 
   def onComputerPower(p: PacketParser) =
     p.readTileEntity[TileEntity]() match {
@@ -59,7 +66,7 @@ class PacketHandler extends CommonPacketHandler {
         if (!computer.isPaused) {
           computer.start()
           computer.lastError match {
-            case message if message != null => player.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey(Settings.namespace + message))
+            case message if message != null => player.addChatMessage(Localization.Analyzer.LastError(message))
             case _ =>
           }
         }

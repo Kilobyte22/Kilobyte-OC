@@ -10,7 +10,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.AxisAlignedBB
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -64,7 +64,7 @@ class Screen(var tier: Int) extends traits.TextBuffer with SidedEnvironment with
   }
 
   def hasKeyboard = screens.exists(screen =>
-    ForgeDirection.VALID_DIRECTIONS.map(side => (side, world.getBlockTileEntity(screen.x + side.offsetX, screen.y + side.offsetY, screen.z + side.offsetZ))).exists {
+    ForgeDirection.VALID_DIRECTIONS.map(side => (side, world.getTileEntity(screen.x + side.offsetX, screen.y + side.offsetY, screen.z + side.offsetZ))).exists {
       case (side, keyboard: Keyboard) => keyboard.hasNodeOnSide(side.getOpposite)
       case _ => false
     })
@@ -161,7 +161,7 @@ class Screen(var tier: Int) extends traits.TextBuffer with SidedEnvironment with
         val (lx, ly, lz) = project(current)
         def tryQueue(dx: Int, dy: Int) {
           val (nx, ny, nz) = unproject(lx + dx, ly + dy, lz)
-          world.getBlockTileEntity(nx, ny, nz) match {
+          world.getTileEntity(nx, ny, nz) match {
             case s: Screen if s.pitch == pitch && s.yaw == yaw && pending.add(s) => queue += s
             case _ => // Ignore.
           }
@@ -325,7 +325,7 @@ class Screen(var tier: Int) extends traits.TextBuffer with SidedEnvironment with
     val (ox, oy, oz) = project(origin)
     def tryMergeTowards(dx: Int, dy: Int) = {
       val (nx, ny, nz) = unproject(ox + dx, oy + dy, oz)
-      world.getBlockTileEntity(nx, ny, nz) match {
+      world.getTileEntity(nx, ny, nz) match {
         case s: Screen if s.tier == tier && s.pitch == pitch && s.color == color && s.yaw == yaw && !screens.contains(s) =>
           val (sx, sy, _) = project(s.origin)
           val canMergeAlongX = sy == oy && s.height == height && s.width + width <= Settings.get.maxScreenWidth

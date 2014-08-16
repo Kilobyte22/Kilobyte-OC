@@ -11,7 +11,7 @@ import net.minecraft.world.World
 
 object GuiHandler extends CommonGuiHandler {
   override def getClientGuiElement(id: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): AnyRef =
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case computer: tileentity.Case if id == GuiType.Case.id =>
         new gui.Case(player.inventory, computer)
       case disassembler: tileentity.Disassembler if id == GuiType.Disassembler.id =>

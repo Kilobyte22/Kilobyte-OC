@@ -77,12 +77,12 @@ class MotionSensor extends traits.Environment {
       if (entity.posY > y + 1) origin.yCoord += 0.75
       if (entity.posZ < z) origin.zCoord -= 0.75
       if (entity.posZ > z + 1) origin.zCoord += 0.75
-      world.clip(origin, target) == null
+      world.rayTraceBlocks(origin, target) == null
     }
 
   private def sendSignal(entity: EntityLivingBase) {
     if (Settings.get.inputUsername) {
-      node.sendToReachable("computer.signal", "motion", Double.box(entity.posX - (x + 0.5)), Double.box(entity.posY - (y + 0.5)), Double.box(entity.posZ - (z + 0.5)), entity.getEntityName)
+      node.sendToReachable("computer.signal", "motion", Double.box(entity.posX - (x + 0.5)), Double.box(entity.posY - (y + 0.5)), Double.box(entity.posZ - (z + 0.5)), entity.getCommandSenderName)
     }
     else {
       node.sendToReachable("computer.signal", "motion", Double.box(entity.posX - (x + 0.5)), Double.box(entity.posY - (y + 0.5)), Double.box(entity.posZ - (z + 0.5)))

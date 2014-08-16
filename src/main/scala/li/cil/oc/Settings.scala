@@ -2,7 +2,6 @@ package li.cil.oc
 
 import java.io._
 import java.net.{Inet4Address, InetAddress}
-import java.util.logging.Level
 
 import com.google.common.net.InetAddresses
 import com.typesafe.config._
@@ -16,15 +15,6 @@ import scala.collection.convert.WrapAsScala._
 import scala.io.{Codec, Source}
 
 class Settings(config: Config) {
-  val itemId = config.getInt("ids.item")
-  val (blockId1, blockId2, blockId3, blockId4) = Array(config.getIntList("ids.block"): _*) match {
-    case Array(id1, id2, id3, id4) =>
-      (id1: Int, id2: Int, id3: Int, id4: Int)
-    case _ =>
-      OpenComputers.log.warning("Bad number of block ids, ignoring.")
-      (3650, 3651, 3652, 3653)
-  }
-
   // ----------------------------------------------------------------------- //
   // client
 
@@ -42,7 +32,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2) =>
       Array((tier1: Double) max 1.0, (tier2: Double) max 1.0)
     case _ =>
-      OpenComputers.log.warning("Bad number of hologram max scales, ignoring.")
+      OpenComputers.log.warn("Bad number of hologram max scales, ignoring.")
       Array(3.0, 4.0)
   }
   val monochromeColor = Integer.decode(config.getString("client.monochromeColor"))
@@ -58,7 +48,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2, tier3, tier4, tier5, tier6) =>
       Array(tier1: Int, tier2: Int, tier3: Int, tier4: Int, tier5: Int, tier6: Int)
     case _ =>
-      OpenComputers.log.warning("Bad number of RAM sizes, ignoring.")
+      OpenComputers.log.warn("Bad number of RAM sizes, ignoring.")
       Array(192, 256, 384, 512, 768, 1024)
   }
   val ramScaleFor64Bit = config.getDouble("computer.ramScaleFor64Bit") max 1
@@ -66,7 +56,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2, tier3) =>
       Array(tier1: Int, tier2: Int, tier3: Int)
     case _ =>
-      OpenComputers.log.warning("Bad number of CPU component counts, ignoring.")
+      OpenComputers.log.warn("Bad number of CPU component counts, ignoring.")
       Array(8, 12, 16)
   }
   val canComputersBeOwned = config.getBoolean("computer.canComputersBeOwned")
@@ -156,7 +146,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2, tier3) =>
       Array(tier1: Double, tier2: Double, tier3: Double)
     case _ =>
-      OpenComputers.log.warning("Bad number of battery upgrade buffer sizes, ignoring.")
+      OpenComputers.log.warn("Bad number of battery upgrade buffer sizes, ignoring.")
       Array(10000.0, 15000.0, 20000.0)
   }
 
@@ -191,7 +181,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2, tier3) =>
       Array(tier1: Int, tier2: Int, tier3: Int)
     case _ =>
-      OpenComputers.log.warning("Bad number of HDD sizes, ignoring.")
+      OpenComputers.log.warn("Bad number of HDD sizes, ignoring.")
       Array(1024, 2048, 4096)
   }
   val floppySize = config.getInt("filesystem.floppySize") max 0
@@ -233,7 +223,7 @@ class Settings(config: Config) {
     case Array(tier1, tier2, tier3) =>
       Array(math.max(tier1, 1), math.max(tier2, 1), math.max(tier3, 1))
     case _ =>
-      OpenComputers.log.warning("Bad number of Remote Terminal counts, ignoring.")
+      OpenComputers.log.warn("Bad number of Remote Terminal counts, ignoring.")
       Array(2, 4, 8)
   }
   val updateCheck = config.getBoolean("misc.updateCheck")
@@ -262,18 +252,20 @@ object Settings {
   // Electricity to provide global power support.
   val valueBuildCraft = 500.0
   val valueFactorization = 6.5
+  val valueGalacticraft = 24.0
   val valueIndustrialCraft2 = 200.0
-  val valueMekanism = 250.0 / 9.0
-  val valueThermalExpansion = 50.0
+  val valueMekanism = 5000.0 / 9.0
+  val valueRedstoneFlux = 35.0
   val valueUniversalElectricity = 1.0
 
   val valueInternal = valueBuildCraft
 
   val ratioBuildCraft = valueBuildCraft / valueInternal
   val ratioFactorization = valueFactorization / valueInternal
+  val ratioGalacticraft = valueGalacticraft / valueInternal
   val ratioIndustrialCraft2 = valueIndustrialCraft2 / valueInternal
   val ratioMekanism = valueMekanism / valueInternal
-  val ratioThermalExpansion = valueThermalExpansion / valueInternal
+  val ratioRedstoneFlux = valueRedstoneFlux / valueInternal
   val ratioUniversalElectricity = valueUniversalElectricity / valueInternal
 
   def basicScreenPixels = screenResolutionsByTier(0)._1 * screenResolutionsByTier(0)._2
@@ -305,7 +297,7 @@ object Settings {
       catch {
         case e: Throwable =>
           if (file.exists()) {
-            OpenComputers.log.log(Level.WARNING, "Failed loading config, using defaults.", e)
+            OpenComputers.log.warn("Failed loading config, using defaults.", e)
           }
           settings = new Settings(defaults.getConfig("opencomputers"))
           defaults
@@ -326,7 +318,7 @@ object Settings {
     }
     catch {
       case e: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Failed saving config.", e)
+        OpenComputers.log.warn("Failed saving config.", e)
     }
   }
 
@@ -387,7 +379,7 @@ object Settings {
         (inetAddress: InetAddress, host: String) => host == value || inetAddress == address
     } catch {
       case t: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Invalid entry in internet blacklist / whitelist: " + value, t)
+        OpenComputers.log.warn("Invalid entry in internet blacklist / whitelist: " + value, t)
         (inetAddress: InetAddress, host: String) => true
     }
 

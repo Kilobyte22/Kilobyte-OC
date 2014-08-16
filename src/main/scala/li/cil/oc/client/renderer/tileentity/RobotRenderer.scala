@@ -1,7 +1,5 @@
 package li.cil.oc.client.renderer.tileentity
 
-import java.util.logging.Level
-
 import com.google.common.base.Strings
 import li.cil.oc.api.event.RobotRenderEvent
 import li.cil.oc.client.Textures
@@ -13,14 +11,16 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.entity.{RenderManager, RendererLivingEntity}
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer
 import net.minecraft.client.renderer.{GLAllocation, RenderBlocks, Tessellator}
-import net.minecraft.item.Item
+import net.minecraft.init.Items
+import net.minecraft.item.ItemBlock
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.Vec3
 import net.minecraftforge.client.IItemRenderer.ItemRenderType
 import net.minecraftforge.client.IItemRenderer.ItemRenderType._
 import net.minecraftforge.client.IItemRenderer.ItemRendererHelper._
 import net.minecraftforge.client.MinecraftForgeClient
-import net.minecraftforge.common.{ForgeDirection, MinecraftForge}
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.common.util.ForgeDirection
 import org.lwjgl.opengl.{GL11, GL12}
 
 object RobotRenderer extends TileEntitySpecialRenderer {
@@ -319,16 +319,15 @@ object RobotRenderer extends TileEntitySpecialRenderer {
 
             val customRenderer = MinecraftForgeClient.getItemRenderer(stack, EQUIPPED)
             val is3D = customRenderer != null && customRenderer.shouldUseRenderHelper(EQUIPPED, stack, BLOCK_3D)
-            val isBlock = stack.itemID < Block.blocksList.length && stack.getItemSpriteNumber == 0
 
-            if (is3D || (isBlock && RenderBlocks.renderItemIn3d(Block.blocksList(stack.itemID).getRenderType))) {
+            if (is3D || (stack.getItem.isInstanceOf[ItemBlock] && RenderBlocks.renderItemIn3d(Block.getBlockFromItem(stack.getItem).getRenderType))) {
               val scale = 0.375f
               GL11.glTranslatef(0, 0.1875f, -0.3125f)
               GL11.glRotatef(20, 1, 0, 0)
               GL11.glRotatef(45, 0, 1, 0)
               GL11.glScalef(-scale, -scale, scale)
             }
-            else if (stack.itemID == Item.bow.itemID) {
+            else if (stack.getItem == Items.bow) {
               val scale = 0.375f
               GL11.glTranslatef(0, 0.2f, -0.2f)
               GL11.glRotatef(-10, 0, 1, 0)
@@ -336,9 +335,9 @@ object RobotRenderer extends TileEntitySpecialRenderer {
               GL11.glRotatef(-20, 1, 0, 0)
               GL11.glRotatef(45, 0, 1, 0)
             }
-            else if (Item.itemsList(stack.itemID).isFull3D) {
+            else if (stack.getItem.isFull3D) {
               val scale = 0.375f
-              if (Item.itemsList(stack.itemID).shouldRotateAroundWhenRendering) {
+              if (stack.getItem.shouldRotateAroundWhenRendering) {
                 GL11.glRotatef(180, 0, 0, 1)
                 GL11.glTranslatef(0, -0.125f, 0)
               }
@@ -377,7 +376,7 @@ object RobotRenderer extends TileEntitySpecialRenderer {
           }
           catch {
             case e: Throwable =>
-              OpenComputers.log.log(Level.WARNING, "Failed rendering equipped item.", e)
+              OpenComputers.log.warn("Failed rendering equipped item.", e)
               robot.renderingErrored = true
           }
           GL11.glEnable(GL11.GL_CULL_FACE)
@@ -405,7 +404,7 @@ object RobotRenderer extends TileEntitySpecialRenderer {
         }
         catch {
           case e: Throwable =>
-            OpenComputers.log.log(Level.WARNING, "Failed rendering equipped upgrade.", e)
+            OpenComputers.log.warn("Failed rendering equipped upgrade.", e)
             robot.renderingErrored = true
         }
       }
@@ -418,7 +417,7 @@ object RobotRenderer extends TileEntitySpecialRenderer {
 
       // This is pretty much copy-pasta from the entity's label renderer.
       val t = Tessellator.instance
-      val f = getFontRenderer
+      val f = func_147498_b
       val scale = 1.6f / 60f
       val width = f.getStringWidth(name)
       val halfWidth = width / 2
@@ -427,8 +426,8 @@ object RobotRenderer extends TileEntitySpecialRenderer {
       GL11.glNormal3f(0, 1, 0)
       GL11.glColor3f(1, 1, 1)
 
-      GL11.glRotatef(-tileEntityRenderer.playerYaw, 0, 1, 0)
-      GL11.glRotatef(tileEntityRenderer.playerPitch, 1, 0, 0)
+      GL11.glRotatef(-field_147501_a.field_147562_h, 0, 1, 0)
+      GL11.glRotatef(field_147501_a.field_147563_i, 1, 0, 0)
       GL11.glScalef(-scale, -scale, scale)
 
       RenderState.makeItBlend()

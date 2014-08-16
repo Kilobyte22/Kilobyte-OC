@@ -1,61 +1,61 @@
 package li.cil.oc.common.event
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.api.event._
 import li.cil.oc.api.machine.Robot
 import li.cil.oc.server.component
 import li.cil.oc.{Localization, Settings}
-import net.minecraftforge.event.ForgeSubscribe
 import org.lwjgl.opengl.GL11
 
 object ExperienceUpgradeHandler {
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotAnalyze(e: RobotAnalyzeEvent) {
     val (level, experience) = getLevelAndExperience(e.robot)
     // This is basically a 'does it have an experience upgrade' check.
     if (experience != 0.0) {
-      e.player.sendChatToPlayer(Localization.Analyzer.RobotXp(experience, level))
+      e.player.addChatMessage(Localization.Analyzer.RobotXp(experience, level))
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotComputeDamageRate(e: RobotUsedTool.ComputeDamageRate) {
     e.setDamageRate(e.getDamageRate * math.max(0, 1 - getLevel(e.robot) * Settings.get.toolEfficiencyPerLevel))
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotBreakBlockPre(e: RobotBreakBlockEvent.Pre) {
     val boost = math.max(0, 1 - getLevel(e.robot) * Settings.get.harvestSpeedBoostPerLevel)
     e.setBreakTime(e.getBreakTime * boost)
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotAttackEntityPost(e: RobotAttackEntityEvent.Post) {
     if (e.robot.getComponentInSlot(e.robot.selectedSlot()) != null && e.target.isDead) {
       addExperience(e.robot, Settings.get.robotActionXp)
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotBreakBlockPost(e: RobotBreakBlockEvent.Post) {
     addExperience(e.robot, e.experience * Settings.get.robotOreXpRate + Settings.get.robotActionXp)
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotPlaceBlockPost(e: RobotPlaceBlockEvent.Post) {
     addExperience(e.robot, Settings.get.robotActionXp)
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotMovePost(e: RobotMoveEvent.Post) {
     addExperience(e.robot, Settings.get.robotExhaustionXpRate * 0.01)
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotExhaustion(e: RobotExhaustionEvent) {
     addExperience(e.robot, Settings.get.robotExhaustionXpRate * e.exhaustion)
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onRobotRender(e: RobotRenderEvent) {
     val level = if (e.robot != null) getLevel(e.robot) else 0
     if (level > 19) {

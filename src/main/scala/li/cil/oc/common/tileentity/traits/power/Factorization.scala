@@ -4,7 +4,7 @@ import cpw.mods.fml.common.Optional
 import factorization.api.{Charge, Coord, IChargeConductor}
 import li.cil.oc.Settings
 import li.cil.oc.util.mods.Mods
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait Factorization extends Common {
   private lazy val useFactorizationPower = isServer && Mods.Factorization.isAvailable

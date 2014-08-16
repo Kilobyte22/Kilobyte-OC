@@ -1,23 +1,22 @@
 package li.cil.oc.client.renderer
 
-import java.util
 import java.util.concurrent.{Callable, TimeUnit}
 
 import com.google.common.cache.CacheBuilder
-import cpw.mods.fml.common.{ITickHandler, TickType}
+import cpw.mods.fml.common.eventhandler.{EventPriority, SubscribeEvent}
+import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent
 import li.cil.oc.api.event.RobotRenderEvent
 import li.cil.oc.client.renderer.tileentity.RobotRenderer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.inventory.GuiContainer
 import net.minecraft.entity.Entity
 import net.minecraftforge.client.event.RenderPlayerEvent
-import net.minecraftforge.event.{EventPriority, ForgeSubscribe}
 import org.lwjgl.opengl.{GL11, GL12}
 
 import scala.collection.convert.WrapAsScala._
 import scala.collection.mutable
 
-object PetRenderer extends ITickHandler {
+object PetRenderer {
   val hidden = mutable.Set.empty[String]
 
   private val entitledPlayers = Map(
@@ -33,7 +32,7 @@ object PetRenderer extends ITickHandler {
 
   private var rendering: Option[(Double, Double, Double)] = None
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onPlayerRender(e: RenderPlayerEvent.Pre) {
     val name = e.entityPlayer.getCommandSenderName
     if (hidden.contains(name) || !entitledPlayers.contains(name)) return
@@ -78,7 +77,7 @@ object PetRenderer extends ITickHandler {
     rendering = None
   }
 
-  @ForgeSubscribe(priority = EventPriority.LOWEST)
+  @SubscribeEvent(priority = EventPriority.LOWEST)
   def onRobotRender(e: RobotRenderEvent) {
     rendering match {
       case Some((r, g, b)) => GL11.glColor3d(r, g, b)
@@ -135,16 +134,11 @@ object PetRenderer extends ITickHandler {
     private def isForInventory = new Exception().getStackTrace.exists(_.getClassName == classOf[GuiContainer].getName)
   }
 
-  override def getLabel = "OpenComputers.PetRenderer"
-
-  override def ticks() = util.EnumSet.of(TickType.CLIENT)
-
-  override def tickStart(tickType: util.EnumSet[TickType], tickData: AnyRef*) {
+  @SubscribeEvent
+  def tickStart(e: ClientTickEvent) {
     petLocations.cleanUp()
     for (pet <- petLocations.asMap.values) {
       pet.update()
     }
   }
-
-  override def tickEnd(tickType: util.EnumSet[TickType], tickData: AnyRef*) {}
 }

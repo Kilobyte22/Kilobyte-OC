@@ -11,7 +11,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.ISidedInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class RobotProxy(val robot: Robot) extends traits.Computer with traits.PowerInformation with api.machine.Robot with ISidedInventory {
   def this() = this(new Robot())
@@ -82,7 +82,7 @@ class RobotProxy(val robot: Robot) extends traits.Computer with traits.PowerInfo
     super.validate()
     val firstProxy = robot.proxy == null
     robot.proxy = this
-    robot.worldObj = worldObj
+    robot.setWorldObj(worldObj)
     robot.xCoord = xCoord
     robot.yCoord = yCoord
     robot.zCoord = zCoord
@@ -129,7 +129,7 @@ class RobotProxy(val robot: Robot) extends traits.Computer with traits.PowerInfo
 
   override def shouldRenderInPass(pass: Int) = robot.shouldRenderInPass(pass)
 
-  override def onInventoryChanged() = robot.onInventoryChanged()
+  override def markDirty() = robot.markDirty()
 
   // ----------------------------------------------------------------------- //
 
@@ -205,11 +205,11 @@ class RobotProxy(val robot: Robot) extends traits.Computer with traits.PowerInfo
 
   override def getStackInSlotOnClosing(slot: Int) = robot.getStackInSlotOnClosing(slot)
 
-  override def openChest() = robot.openChest()
+  override def openInventory() = robot.openInventory()
 
-  override def closeChest() = robot.closeChest()
+  override def closeInventory() = robot.closeInventory()
 
-  override def isInvNameLocalized = robot.isInvNameLocalized
+  override def hasCustomInventoryName = robot.hasCustomInventoryName
 
   override def isUseableByPlayer(player: EntityPlayer) = robot.isUseableByPlayer(player)
 
@@ -221,7 +221,7 @@ class RobotProxy(val robot: Robot) extends traits.Computer with traits.PowerInfo
 
   override def installedMemory = robot.installedMemory
 
-  override def getInvName = robot.getInvName
+  override def getInventoryName = robot.getInventoryName
 
   override def getSizeInventory = robot.getSizeInventory
 

@@ -97,23 +97,6 @@ class Robot(playerInventory: InventoryPlayer, val robot: tileentity.Robot) exten
     add(buttonList, scrollButton)
   }
 
-  override def drawSlotInventory(slot: Slot) {
-    RenderState.makeItBlend()
-    super.drawSlotInventory(slot)
-    GL11.glColor3f(1, 1, 1)
-    GL11.glDisable(GL11.GL_BLEND)
-    if (!slot.getHasStack) slot match {
-      case component: StaticComponentSlot if component.tierIcon != null =>
-        mc.getTextureManager.bindTexture(TextureMap.locationItemsTexture)
-        GL11.glDisable(GL11.GL_DEPTH_TEST)
-        GL11.glDisable(GL11.GL_LIGHTING)
-        drawTexturedModelRectFromIcon(slot.xDisplayPosition, slot.yDisplayPosition, component.tierIcon, 16, 16)
-        GL11.glEnable(GL11.GL_LIGHTING)
-        GL11.glEnable(GL11.GL_DEPTH_TEST)
-      case _ =>
-    }
-  }
-
   override def drawBuffer() {
     if (buffer != null) {
       GL11.glTranslatef(bufferX, bufferY, 0)
@@ -141,19 +124,19 @@ class Robot(playerInventory: InventoryPlayer, val robot: tileentity.Robot) exten
   protected override def drawGuiContainerForegroundLayer(mouseX: Int, mouseY: Int) {
     drawBufferLayer()
     GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS) // Me lazy... prevents NEI render glitch.
-    if (isPointInRegion(power.x, power.y, power.width, power.height, mouseX, mouseY)) {
+    if (func_146978_c(power.x, power.y, power.width, power.height, mouseX, mouseY)) {
       val tooltip = new java.util.ArrayList[String]
       val format = Localization.Robot.Power + ": %d%% (%d/%d)"
       tooltip.add(format.format(
         ((robot.globalBuffer / robot.globalBufferSize) * 100).toInt,
         robot.globalBuffer.toInt,
         robot.globalBufferSize.toInt))
-      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
     }
-    if (powerButton.func_82252_a) {
+    if (powerButton.func_146115_a) {
       val tooltip = new java.util.ArrayList[String]
       tooltip.add(if (robot.isRunning) Localization.Robot.TurnOff else Localization.Robot.TurnOn)
-      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
     }
     GL11.glPopAttrib()
   }
@@ -168,6 +151,34 @@ class Robot(playerInventory: InventoryPlayer, val robot: tileentity.Robot) exten
     if (robot.inventorySize > 0) {
       drawSelection()
     }
+
+    GL11.glPushMatrix()
+    GL11.glTranslatef(guiLeft, guiTop, 0)
+    for (slot <- 0 until inventorySlots.inventorySlots.size()) {
+      drawSlotInventory(inventorySlots.inventorySlots.get(slot).asInstanceOf[Slot])
+    }
+    GL11.glPopMatrix()
+
+    RenderState.makeItBlend()
+  }
+
+  def drawSlotInventory(slot: Slot) {
+    GL11.glColor3f(1, 1, 1)
+    if (!slot.getHasStack) slot match {
+      case component: StaticComponentSlot if component.tierIcon != null =>
+        mc.getTextureManager.bindTexture(TextureMap.locationItemsTexture)
+        GL11.glDisable(GL11.GL_DEPTH_TEST)
+        GL11.glDisable(GL11.GL_LIGHTING)
+        drawTexturedModelRectFromIcon(slot.xDisplayPosition, slot.yDisplayPosition, component.tierIcon, 16, 16)
+        GL11.glEnable(GL11.GL_LIGHTING)
+        GL11.glEnable(GL11.GL_DEPTH_TEST)
+      case _ =>
+    }
+  }
+
+  protected override def drawGradientRect(par1: Int, par2: Int, par3: Int, par4: Int, par5: Int, par6: Int) {
+    super.drawGradientRect(par1, par2, par3, par4, par5, par6)
+    RenderState.makeItBlend()
   }
 
   protected override def keyTyped(char: Char, code: Int) {

@@ -101,7 +101,7 @@ class RobotAssembler(playerInventory: InventoryPlayer, val assembler: tileentity
     GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS) // Me lazy... prevents NEI render glitch.
     if (!assemblerContainer.isAssembling) {
       def drawMessage(message: String) {
-        fontRenderer.drawString(message, 30, 94, 0x404040)
+        fontRendererObj.drawString(message, 30, 94, 0x404040)
       }
       if (!inventorySlots.getSlot(0).getHasStack) {
         drawMessage(Localization.RobotAssembler.InsertCase)
@@ -116,9 +116,9 @@ class RobotAssembler(playerInventory: InventoryPlayer, val assembler: tileentity
         drawMessage(Localization.RobotAssembler.InsertRAM)
       }
       else {
-        fontRenderer.drawString(Localization.RobotAssembler.Complexity(assembler.complexity, assembler.maxComplexity), 30, 94, if (isCapacityValid) 0x404040 else 0x804040)
+        fontRendererObj.drawString(Localization.RobotAssembler.Complexity(assembler.complexity, assembler.maxComplexity), 30, 94, if (isCapacityValid) 0x404040 else 0x804040)
       }
-      if (runButton.func_82252_a) {
+      if (runButton.func_146115_a) {
         val tooltip = new java.util.ArrayList[String]
         tooltip.add(Localization.RobotAssembler.Run)
         if (canBuild) {
@@ -133,14 +133,14 @@ class RobotAssembler(playerInventory: InventoryPlayer, val assembler: tileentity
             tooltip.addAll(warnings)
           }
         }
-        drawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+        drawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
       }
     }
-    else if (isPointInRegion(progress.x, progress.y, progress.width, progress.height, mouseX, mouseY)) {
+    else if (func_146978_c(progress.x, progress.y, progress.width, progress.height, mouseX, mouseY)) {
       val tooltip = new java.util.ArrayList[String]
       val timeRemaining = formatTime(assemblerContainer.assemblyRemainingTime)
       tooltip.add(Localization.RobotAssembler.Progress(assemblerContainer.assemblyProgress, timeRemaining))
-      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer)
+      copiedDrawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRendererObj)
     }
     GL11.glPopAttrib()
   }

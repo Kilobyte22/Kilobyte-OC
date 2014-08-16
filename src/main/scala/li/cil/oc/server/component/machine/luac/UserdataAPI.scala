@@ -1,7 +1,6 @@
 package li.cil.oc.server.component.machine.luac
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
-import java.util.logging.Level
 
 import li.cil.oc.OpenComputers
 import li.cil.oc.api.Persistable
@@ -43,7 +42,7 @@ class UserdataAPI(owner: NativeLuaArchitecture) extends NativeLuaAPI(owner) {
       }
       catch {
         case t: Throwable =>
-          OpenComputers.log.log(Level.WARNING, "Error in userdata load function.", t)
+          OpenComputers.log.warn("Error in userdata load function.", t)
           throw t
       }
     })
@@ -76,7 +75,7 @@ class UserdataAPI(owner: NativeLuaArchitecture) extends NativeLuaAPI(owner) {
     lua.pushScalaFunction(lua => {
       val value = lua.toJavaObjectRaw(1).asInstanceOf[Value]
       try value.dispose(machine) catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Error in dispose method of userdata of type " + value.getClass.getName, t)
+        case t: Throwable => OpenComputers.log.warn("Error in dispose method of userdata of type " + value.getClass.getName, t)
       }
       0
     })

@@ -4,7 +4,7 @@ import buildcraft.api.power.{IPowerReceptor, PowerHandler}
 import cpw.mods.fml.common.Optional
 import li.cil.oc.Settings
 import li.cil.oc.util.mods.Mods
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait BuildCraft extends Common {
   private lazy val useBuildCraftPower = isServer && Mods.BuildCraftPower.isAvailable

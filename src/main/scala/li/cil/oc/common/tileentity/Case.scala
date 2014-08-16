@@ -11,7 +11,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.server.MinecraftServer
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Case(var tier: Int) extends traits.PowerAcceptor with traits.Computer with traits.Colored {
   def this() = this(0)
@@ -31,7 +31,7 @@ class Case(var tier: Int) extends traits.PowerAcceptor with traits.Computer with
 
   // ----------------------------------------------------------------------- //
 
-  private def serverPlayer(player: String): EntityPlayer = MinecraftServer.getServer.getConfigurationManager.getPlayerForUsername(player)
+  private def serverPlayer(player: String): EntityPlayer = MinecraftServer.getServer.getConfigurationManager.func_152612_a(player)
 
   @SideOnly(Side.CLIENT)
   private def clientPlayer: EntityPlayer = Minecraft.getMinecraft.thePlayer // Avoid client class getting loaded on server.
@@ -108,15 +108,15 @@ class Case(var tier: Int) extends traits.PowerAcceptor with traits.Computer with
     }
   }
 
-  override def onInventoryChanged() {
-    super.onInventoryChanged()
+  override def markDirty() {
+    super.markDirty()
     recomputeMaxComponents()
   }
 
   override def getSizeInventory = if (tier < 0 || tier >= InventorySlots.computer.length) 0 else InventorySlots.computer(tier).length
 
   override def isUseableByPlayer(player: EntityPlayer) =
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case t: traits.TileEntity if t == this && canInteract(player.getCommandSenderName) =>
         player.getDistanceSq(x + 0.5, y + 0.5, z + 0.5) <= 64
       case _ => false

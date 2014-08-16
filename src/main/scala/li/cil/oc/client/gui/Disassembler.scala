@@ -13,8 +13,8 @@ class Disassembler(playerInventory: InventoryPlayer, val disassembler: tileentit
   val progress = addWidget(new ProgressBar(18, 65))
 
   override def drawGuiContainerForegroundLayer(mouseX: Int, mouseY: Int) = {
-    fontRenderer.drawString(
-      StatCollector.translateToLocal(disassembler.getInvName),
+    fontRendererObj.drawString(
+      StatCollector.translateToLocal(disassembler.getInventoryName),
       8, 6, 0x404040)
   }
 

@@ -20,12 +20,12 @@ class RedstoneCard(val parent: Delegator, val tier: Int) extends Delegate with I
       if (Mods.ProjectRedTransmission.isAvailable) {
         tooltip.addAll(Tooltip.get(super.unlocalizedName + ".ProjectRed"))
       }
-      if (Mods.RedLogic.isAvailable) {
+    if (Mods.RedLogic.isAvailable) {
         tooltip.addAll(Tooltip.get(super.unlocalizedName + ".RedLogic"))
-      }
-      if (Mods.MineFactoryReloaded.isAvailable) {
+    }
+    if (Mods.MineFactoryReloaded.isAvailable) {
         tooltip.addAll(Tooltip.get(super.unlocalizedName + ".RedNet"))
-      }
+    }
       if (Mods.WirelessRedstoneCBE.isAvailable) {
         tooltip.addAll(Tooltip.get(super.unlocalizedName + ".WirelessCBE"))
       }

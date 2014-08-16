@@ -11,7 +11,7 @@ import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
 import net.minecraft.item.{EnumRarity, ItemStack}
 import net.minecraft.util.AxisAlignedBB
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Hologram(val parent: SpecialDelegator, val tier: Int) extends SpecialDelegate {
   override val unlocalizedName = super.unlocalizedName + tier
@@ -31,7 +31,7 @@ class Hologram(val parent: SpecialDelegator, val tier: Int) extends SpecialDeleg
   override def wailaBody(stack: ItemStack, tooltip: util.List[String], accessor: IWailaDataAccessor, config: IWailaConfigHandler) {
     val node = accessor.getNBTData.getCompoundTag(Settings.namespace + "node")
     if (node.hasKey("address")) {
-      tooltip.add(Localization.Analyzer.Address(node.getString("address")).toString)
+      tooltip.add(Localization.Analyzer.Address(node.getString("address")).getUnformattedTextForChat)
     }
   }
 
@@ -45,10 +45,10 @@ class Hologram(val parent: SpecialDelegator, val tier: Int) extends SpecialDeleg
   }
 
   override def bounds(world: IBlockAccess, x: Int, y: Int, z: Int) =
-    AxisAlignedBB.getAABBPool.getAABB(0, 0, 0, 1, 0.5f, 1)
+    AxisAlignedBB.getBoundingBox(0, 0, 0, 1, 0.5f, 1)
 
   override def itemBounds() {
-    parent.setBlockBounds(AxisAlignedBB.getAABBPool.getAABB(0, 0, 0, 1, 0.5f, 1))
+    parent.setBlockBounds(AxisAlignedBB.getBoundingBox(0, 0, 0, 1, 0.5f, 1))
   }
 
   // ----------------------------------------------------------------------- //

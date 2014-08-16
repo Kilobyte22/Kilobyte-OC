@@ -88,7 +88,7 @@ object Items extends ItemAPI {
         Blocks.blockSimpleWithRedstone.subBlock(stack).getOrElse(
           Blocks.blockSpecial.subBlock(stack).getOrElse(
             Blocks.blockSpecialWithRedstone.subBlock(stack).getOrElse(stack.getItem match {
-              case block: ItemBlock if block.getBlockID >= 0 => net.minecraft.block.Block.blocksList(block.getBlockID)
+              case block: ItemBlock => block.field_150939_a
               case item => item
             })
           )
@@ -106,16 +106,16 @@ object Items extends ItemAPI {
   var ironNugget: item.IronNugget = _
 
   def init() {
-    multi = new item.Delegator(Settings.get.itemId) {
-      override def getSubItems(itemId: Int, tab: CreativeTabs, list: java.util.List[_]) {
+    multi = new item.Delegator() {
+      override def getSubItems(item: Item, tab: CreativeTabs, list: java.util.List[_]) {
         // Workaround for MC's untyped lists...
         def add[T](list: java.util.List[T], value: Any) = list.add(value.asInstanceOf[T])
-        super.getSubItems(itemId, tab, list)
+        super.getSubItems(item, tab, list)
         Loot.worldDisks.values.foreach(entry => add(list, entry._1))
       }
     }
 
-    GameRegistry.registerItem(multi, Settings.namespace + "item")
+    GameRegistry.registerItem(multi, "item")
 
     Recipes.addItem(new item.Analyzer(multi), "analyzer", "oc:analyzer")
 
@@ -212,7 +212,7 @@ object Items extends ItemAPI {
         val data = new NBTTagCompound()
         data.setString(Settings.namespace + "fs.label", "openos")
 
-        val nbt = new NBTTagCompound("tag")
+        val nbt = new NBTTagCompound()
         nbt.setTag(Settings.namespace + "data", data)
         nbt.setString(Settings.namespace + "lootPath", "OpenOS")
         nbt.setInteger(Settings.namespace + "color", Color.dyes.indexOf("dyeGreen"))

@@ -6,7 +6,7 @@ import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.{Color, SideTracker}
 import li.cil.oc.{Settings, api}
 import net.minecraft.inventory.InventoryCrafting
-import net.minecraft.item.{Item, ItemStack}
+import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 
 object ExtendedRecipe {
@@ -19,7 +19,7 @@ object ExtendedRecipe {
       Option(api.Driver.driverFor(craftedStack)).foreach(driver =>
         for (i <- 0 until inventory.getSizeInventory) {
           val stack = inventory.getStackInSlot(i)
-          if (stack != null && stack.getItem == Item.map) {
+          if (stack != null && stack.getItem == net.minecraft.init.Items.filled_map) {
             // Store information of the map used for crafting in the result.
             val nbt = driver.dataTag(craftedStack)
             nbt.setNewCompoundTag(Settings.namespace + "map", stack.writeToNBT)
@@ -36,7 +36,7 @@ object ExtendedRecipe {
 
     if (api.Items.get(craftedStack) == floppy) {
       if (!craftedStack.hasTagCompound) {
-        craftedStack.setTagCompound(new NBTTagCompound("tag"))
+        craftedStack.setTagCompound(new NBTTagCompound())
       }
       val nbt = craftedStack.getTagCompound
       for (i <- 0 until inventory.getSizeInventory) {

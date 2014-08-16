@@ -7,7 +7,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.EnumRarity
 import net.minecraft.util.MovingObjectPosition
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class RobotAfterimage(val parent: SpecialDelegator) extends SpecialDelegate {
   showInItemList = false
@@ -37,11 +37,11 @@ class RobotAfterimage(val parent: SpecialDelegator) extends SpecialDelegate {
 
   // ----------------------------------------------------------------------- //
 
-  override def opacity(world: World, x: Int, y: Int, z: Int) = 0
+  override def opacity(world: IBlockAccess, x: Int, y: Int, z: Int) = 0
 
-  override def isAir(world: World, x: Int, y: Int, z: Int) = true
+  override def isAir(world: IBlockAccess, x: Int, y: Int, z: Int) = true
 
-  override def isNormalCube(world: World, x: Int, y: Int, z: Int) = false
+  override def isNormalCube(world: IBlockAccess, x: Int, y: Int, z: Int) = false
 
   override def isSolid(world: IBlockAccess, x: Int, y: Int, z: Int, side: ForgeDirection) = false
 
@@ -50,7 +50,7 @@ class RobotAfterimage(val parent: SpecialDelegator) extends SpecialDelegate {
   // ----------------------------------------------------------------------- //
 
   override def addedToWorld(world: World, x: Int, y: Int, z: Int) {
-    world.scheduleBlockUpdate(x, y, z, parent.blockID, math.max((Settings.get.moveDelay * 20).toInt, 1) - 1)
+    world.scheduleBlockUpdate(x, y, z, parent, math.max((Settings.get.moveDelay * 20).toInt, 1) - 1)
   }
 
   override def update(world: World, x: Int, y: Int, z: Int) {
@@ -66,7 +66,7 @@ class RobotAfterimage(val parent: SpecialDelegator) extends SpecialDelegate {
         robot.moveFromX == x &&
         robot.moveFromY == y &&
         robot.moveFromZ == z =>
-        robot.proxy.getBlockType.removeBlockByPlayer(world, player, robot.x, robot.y, robot.z)
+        robot.proxy.getBlockType.removedByPlayer(world, player, robot.x, robot.y, robot.z, false)
       case _ => super.removedByEntity(world, x, y, z, player) // Probably broken by the robot we represent.
     }
   }
@@ -100,7 +100,7 @@ class RobotAfterimage(val parent: SpecialDelegator) extends SpecialDelegate {
   def findMovingRobot(world: IBlockAccess, x: Int, y: Int, z: Int): Option[tileentity.Robot] = {
     for (side <- ForgeDirection.VALID_DIRECTIONS) {
       val (tx, ty, tz) = (x + side.offsetX, y + side.offsetY, z + side.offsetZ)
-      if (!world.isAirBlock(tx, ty, tz)) world.getBlockTileEntity(tx, ty, tz) match {
+      if (!world.isAirBlock(tx, ty, tz)) world.getTileEntity(tx, ty, tz) match {
         case proxy: tileentity.RobotProxy if proxy.robot.moveFromX == x && proxy.robot.moveFromY == y && proxy.robot.moveFromZ == z => return Some(proxy.robot)
         case _ =>
       }

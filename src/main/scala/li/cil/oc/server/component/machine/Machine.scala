@@ -2,7 +2,6 @@ package li.cil.oc.server.component.machine
 
 import java.lang.reflect.Constructor
 import java.util.concurrent.TimeUnit
-import java.util.logging.Level
 
 import li.cil.oc.api.detail.MachineAPI
 import li.cil.oc.api.machine._
@@ -16,10 +15,12 @@ import li.cil.oc.server.network.{ArgumentsImpl, Callbacks}
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.util.ThreadPoolFactory
 import li.cil.oc.{OpenComputers, Settings, server}
+import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt._
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.integrated.IntegratedServer
+import net.minecraftforge.common.util.Constants.NBT
 
 import scala.Array.canBuildFrom
 import scala.collection.mutable
@@ -101,8 +102,11 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
 
   override def canInteract(player: String) = !Settings.get.canComputersBeOwned ||
     _users.synchronized(_users.isEmpty || _users.contains(player)) ||
-    MinecraftServer.getServer.isSinglePlayer ||
-    MinecraftServer.getServer.getConfigurationManager.isPlayerOpped(player)
+    MinecraftServer.getServer.isSinglePlayer || {
+    val config = MinecraftServer.getServer.getConfigurationManager
+    val entity = config.func_152612_a(player)
+    entity != null && config.func_152596_g(entity.getGameProfile)
+  }
 
   override def isRunning = state.synchronized(state.top != Machine.State.Stopped && state.top != Machine.State.Stopping)
 
@@ -211,7 +215,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
           case arg: Array[Byte] => arg
           case arg: Map[_, _] if arg.isEmpty || arg.head._1.isInstanceOf[String] && arg.head._2.isInstanceOf[String] => arg
           case arg =>
-            OpenComputers.log.warning("Trying to push signal with an unsupported argument of type " + arg.getClass.getName)
+            OpenComputers.log.warn("Trying to push signal with an unsupported argument of type " + arg.getClass.getName)
             null
         }.toArray[AnyRef]))
         true
@@ -436,7 +440,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
           case e: java.lang.Error if e.getMessage == "not enough memory" =>
             crash("gui.Error.OutOfMemory")
           case e: Throwable =>
-            OpenComputers.log.log(Level.WARNING, "Faulty architecture implementation for synchronized calls.", e)
+            OpenComputers.log.warn("Faulty architecture implementation for synchronized calls.", e)
             crash("gui.Error.InternalError")
         }
 
@@ -542,10 +546,10 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     for ((address, name) <- _components) {
       if (node.network.node(address) == null) {
         if (name == "filesystem") {
-          OpenComputers.log.fine(s"A component of type '$name' disappeared ($address)! This usually means that it didn't save its node.")
-          OpenComputers.log.fine("If this was a file system provided by a ComputerCraft peripheral, this is normal.")
+          OpenComputers.log.trace(s"A component of type '$name' disappeared ($address)! This usually means that it didn't save its node.")
+          OpenComputers.log.trace("If this was a file system provided by a ComputerCraft peripheral, this is normal.")
         }
-        else OpenComputers.log.warning(s"A component of type '$name' disappeared ($address)! This usually means that it didn't save its node.")
+        else OpenComputers.log.warn(s"A component of type '$name' disappeared ($address)! This usually means that it didn't save its node.")
         signal("component_removed", address, name)
         invalid += address
       }
@@ -565,37 +569,41 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
 
     super.load(nbt)
 
-    state.pushAll(nbt.getTagList("state").iterator[NBTTagInt].reverse.map(s => Machine.State(s.data)))
-    nbt.getTagList("users").foreach[NBTTagString](u => _users += u.data)
+    // For upgrading from 1.6 - was tag list of int before.
+    if (nbt.hasKey("state", NBT.TAG_INT_ARRAY)) {
+      state.pushAll(nbt.getIntArray("state").reverse.map(Machine.State(_)))
+    }
+    else state.push(Machine.State.Stopped)
+    nbt.getTagList("users", NBT.TAG_STRING).foreach((list, index) => _users += list.getStringTagAt(index))
     if (nbt.hasKey("message")) {
       message = Some(nbt.getString("message"))
     }
 
-    _components ++= nbt.getTagList("components").iterator[NBTTagCompound].map(c =>
-      c.getString("address") -> c.getString("name"))
+    _components ++= nbt.getTagList("components", NBT.TAG_COMPOUND).map((list, index) => {
+      val c = list.getCompoundTagAt(index)
+      c.getString("address") -> c.getString("name")
+    })
 
     tmp.foreach(fs => fs.load(nbt.getCompoundTag("tmp")))
 
     if (state.size > 0 && state.top != Machine.State.Stopped && init()) try {
       architecture.load(nbt)
 
-      signals ++= nbt.getTagList("signals").iterator[NBTTagCompound].map(signalNbt => {
+      signals ++= nbt.getTagList("signals", NBT.TAG_COMPOUND).map((list, index) => {
+        val signalNbt = list.getCompoundTagAt(index)
         val argsNbt = signalNbt.getCompoundTag("args")
         val argsLength = argsNbt.getInteger("length")
         new Machine.Signal(signalNbt.getString("name"),
           (0 until argsLength).map("arg" + _).map(argsNbt.getTag).map {
-            case tag: NBTTagByte if tag.data == -1 => null
-            case tag: NBTTagByte => Boolean.box(tag.data == 1)
-            case tag: NBTTagDouble => Double.box(tag.data)
-            case tag: NBTTagString => tag.data
-            case tag: NBTTagByteArray => tag.byteArray
+            case tag: NBTTagByte if tag.func_150290_f == -1 => null
+            case tag: NBTTagByte => Boolean.box(tag.func_150290_f == 1)
+            case tag: NBTTagDouble => Double.box(tag.func_150286_g)
+            case tag: NBTTagString => tag.func_150285_a_
+            case tag: NBTTagByteArray => tag.func_150292_c
             case tag: NBTTagList =>
               val data = mutable.Map.empty[String, String]
               for (i <- 0 until tag.tagCount by 2) {
-                (tag.tagAt(i), tag.tagAt(i + 1)) match {
-                  case (key: NBTTagString, value: NBTTagString) => data += key.data -> value.data
-                  case _ =>
-                }
+                data += tag.getStringTagAt(i) -> tag.getStringTagAt(i + 1)
               }
               data
             case _ => null
@@ -615,7 +623,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     }
     catch {
       case t: Throwable =>
-        OpenComputers.log.log(Level.SEVERE, s"""Unexpected error loading a state of computer at (${owner.x}, ${owner.y}, ${owner.z}). """ +
+        OpenComputers.log.error(s"""Unexpected error loading a state of computer at (${owner.x}, ${owner.y}, ${owner.z}). """ +
           s"""State: ${state.headOption.fold("no state")(_.toString)}. Unless you're upgrading/downgrading across a major version, please report this! Thank you.""", t)
     }
     else close() // Clean up in case we got a weird state stack.
@@ -632,7 +640,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     // Make sure the component list is up-to-date.
     processAddedComponents()
 
-    nbt.setNewTagList("state", state.map(_.id))
+    nbt.setIntArray("state", state.map(_.id).toArray)
     nbt.setNewTagList("users", _users)
     message.foreach(nbt.setString("message", _))
 
@@ -682,7 +690,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     }
     catch {
       case t: Throwable =>
-        OpenComputers.log.log(Level.SEVERE, s"""Unexpected error saving a state of computer at (${owner.x}, ${owner.y}, ${owner.z}). """ +
+        OpenComputers.log.error(s"""Unexpected error saving a state of computer at (${owner.x}, ${owner.y}, ${owner.z}). """ +
           s"""State: ${state.headOption.fold("no state")(_.toString)}. Unless you're upgrading/downgrading across a major version, please report this! Thank you.""", t)
     }
   }
@@ -707,7 +715,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     }
     catch {
       case ex: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Failed initializing computer.", ex)
+        OpenComputers.log.warn("Failed initializing computer.", ex)
         close()
     }
     false
@@ -748,7 +756,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
   }
 
   private def isGamePaused = !MinecraftServer.getServer.isDedicatedServer && (MinecraftServer.getServer match {
-    case integrated: IntegratedServer => integrated.getServerListeningThread.isGamePaused
+    case integrated: IntegratedServer => Minecraft.getMinecraft.isGamePaused
     case _ => false
   })
 
@@ -828,7 +836,7 @@ class Machine(val owner: Owner, constructor: Constructor[_ <: Architecture]) ext
     }
     catch {
       case e: Throwable =>
-        OpenComputers.log.log(Level.WARNING, "Architecture's runThreaded threw an error. This should never happen!", e)
+        OpenComputers.log.warn("Architecture's runThreaded threw an error. This should never happen!", e)
         crash("gui.Error.InternalError")
     }
 

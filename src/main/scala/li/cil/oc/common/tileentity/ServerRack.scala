@@ -1,9 +1,9 @@
 package li.cil.oc.common.tileentity
 
-import java.util.logging.Level
-
+import com.google.common.base.Strings
 import cpw.mods.fml.common.Optional
 import cpw.mods.fml.common.Optional.Method
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc._
 import li.cil.oc.api.Network
@@ -16,8 +16,8 @@ import li.cil.oc.util.mods.{Mods, Waila}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.{NBTTagCompound, NBTTagString}
-import net.minecraftforge.common.ForgeDirection
-import net.minecraftforge.event.ForgeSubscribe
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.event.world.WorldEvent
 import stargatetech2.api.bus.IBusDevice
 
@@ -71,7 +71,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
   @SideOnly(Side.CLIENT)
   def setRunning(number: Int, value: Boolean) = {
     _isRunning(number) = value
-    world.markBlockForRenderUpdate(x, y, z)
+    world.markBlockForUpdate(x, y, z)
     if (anyRunning) Sound.startLoop(this, "computer_running", 1.5f, 50 + world.rand.nextInt(50))
     else Sound.stopLoop(this)
     this
@@ -196,13 +196,13 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
         val computer = servers(slot).get.machine
         computer.lastError match {
           case value if value != null =>
-            player.sendChatToPlayer(Localization.Analyzer.LastError(value))
+            player.addChatMessage(Localization.Analyzer.LastError(value))
           case _ =>
         }
-        player.sendChatToPlayer(Localization.Analyzer.Components(computer.componentCount, servers(slot).get.maxComponents))
+        player.addChatMessage(Localization.Analyzer.Components(computer.componentCount, servers(slot).get.maxComponents))
         val list = computer.users
         if (list.size > 0) {
-          player.sendChatToPlayer(Localization.Analyzer.Users(list))
+          player.addChatMessage(Localization.Analyzer.Users(list))
         }
         Array(computer.node)
       }
@@ -280,22 +280,19 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
         servers(slot) = Some(new component.Server(this, slot))
       }
     }
-    for ((serverNbt, slot) <- nbt.getTagList(Settings.namespace + "servers").iterator[NBTTagCompound].zipWithIndex if slot < servers.length) {
-      servers(slot) match {
-        case Some(server) => try server.load(serverNbt) catch {
-          case t: Throwable => OpenComputers.log.log(Level.WARNING, "Failed restoring server state. Please report this!", t)
+    nbt.getTagList(Settings.namespace + "servers", NBT.TAG_COMPOUND).foreach((list, index) =>
+      if (index < servers.length) servers(index) match {
+        case Some(server) => try server.load(list.getCompoundTagAt(index)) catch {
+          case t: Throwable => OpenComputers.log.warn("Failed restoring server state. Please report this!", t)
         }
         case _ =>
-      }
-    }
-    val sidesNbt = nbt.getByteArray(Settings.namespace + "sides").byteArray.map(ForgeDirection.getOrientation(_))
+      })
+    val sidesNbt = nbt.getByteArray(Settings.namespace + "sides").map(ForgeDirection.getOrientation(_))
     Array.copy(sidesNbt, 0, sides, 0, math.min(sidesNbt.length, sides.length))
-    val terminalsNbt = nbt.getTagList(Settings.namespace + "terminals").iterator[NBTTagCompound].toArray
-    for (i <- 0 until math.min(terminals.length, terminalsNbt.length)) {
-      try terminals(i).load(terminalsNbt(i)) catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Failed restoring terminal state. Please report this!", t)
-      }
-    }
+    nbt.getTagList(Settings.namespace + "terminals", NBT.TAG_COMPOUND).
+      foreach((list, index) => if (index < terminals.length) try terminals(index).load(list.getCompoundTagAt(index)) catch {
+      case t: Throwable => OpenComputers.log.warn("Failed restoring terminal state. Please report this!", t)
+    })
     range = nbt.getInteger(Settings.namespace + "range")
     internalSwitch = nbt.getBoolean(Settings.namespace + "internalSwitch")
   }
@@ -307,7 +304,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
         case Some(server) =>
           val serverNbt = new NBTTagCompound()
           try server.save(serverNbt) catch {
-            case t: Throwable => OpenComputers.log.log(Level.WARNING, "Failed saving server state. Please report this!", t)
+            case t: Throwable => OpenComputers.log.warn("Failed saving server state. Please report this!", t)
           }
           serverNbt
         case _ => new NBTTagCompound()
@@ -318,7 +315,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
     nbt.setNewTagList(Settings.namespace + "terminals", terminals.map(t => {
       val terminalNbt = new NBTTagCompound()
       try t.save(terminalNbt) catch {
-        case t: Throwable => OpenComputers.log.log(Level.WARNING, "Failed saving terminal state. Please report this!", t)
+        case t: Throwable => OpenComputers.log.warn("Failed saving terminal state. Please report this!", t)
       }
       terminalNbt
     }))
@@ -329,16 +326,17 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
   @SideOnly(Side.CLIENT)
   override def readFromNBTForClient(nbt: NBTTagCompound) {
     super.readFromNBTForClient(nbt)
-    val isRunningNbt = nbt.getByteArray("isServerRunning").byteArray.map(_ == 1)
+    val isRunningNbt = nbt.getByteArray("isServerRunning").map(_ == 1)
     Array.copy(isRunningNbt, 0, _isRunning, 0, math.min(isRunningNbt.length, _isRunning.length))
-    val isPresentNbt = nbt.getTagList("isPresent").iterator[NBTTagString].map(value => if (value.data == "") None else Some(value.data)).toArray
+    val isPresentNbt = nbt.getTagList("isPresent", NBT.TAG_STRING).map((list, index) => {
+      val value = list.getStringTagAt(index)
+      if (Strings.isNullOrEmpty(value)) None else Some(value)
+    }).toArray
     Array.copy(isPresentNbt, 0, isPresent, 0, math.min(isPresentNbt.length, isPresent.length))
-    val sidesNbt = nbt.getByteArray("sides").byteArray.map(ForgeDirection.getOrientation(_))
+    val sidesNbt = nbt.getByteArray("sides").map(ForgeDirection.getOrientation(_))
     Array.copy(sidesNbt, 0, sides, 0, math.min(sidesNbt.length, sides.length))
-    val terminalsNbt = nbt.getTagList("terminals").iterator[NBTTagCompound].toArray
-    for (i <- 0 until math.min(terminals.length, terminalsNbt.length)) {
-      terminals(i).readFromNBTForClient(terminalsNbt(i))
-    }
+    nbt.getTagList("terminals", NBT.TAG_COMPOUND).
+      foreach((list, index) => if (index < terminals.length) terminals(index).readFromNBTForClient(list.getCompoundTagAt(index)))
     range = nbt.getInteger("range")
     if (anyRunning) Sound.startLoop(this, "computer_running", 1.5f, 1000 + world.rand.nextInt(2000))
   }
@@ -346,7 +344,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
   override def writeToNBTForClient(nbt: NBTTagCompound) {
     super.writeToNBTForClient(nbt)
     nbt.setByteArray("isServerRunning", _isRunning.map(value => (if (value) 1 else 0).toByte))
-    nbt.setNewTagList("isPresent", servers.map(value => new NBTTagString(null, value.fold("")(_.machine.node.address))))
+    nbt.setNewTagList("isPresent", servers.map(value => new NBTTagString(value.fold("")(_.machine.node.address))))
     nbt.setByteArray("sides", sides.map(_.ordinal.toByte))
     nbt.setNewTagList("terminals", terminals.map(t => {
       val terminalNbt = new NBTTagCompound()
@@ -396,7 +394,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
           server.machine.node.remove()
           server.inventory.containerOverride = stack
           server.inventory.save(new NBTTagCompound()) // Only flush components.
-          server.inventory.onInventoryChanged()
+          server.inventory.markDirty()
         case _ =>
       }
       servers(slot) = None
@@ -404,15 +402,15 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
     }
   }
 
-  override def onInventoryChanged() {
-    super.onInventoryChanged()
+  override def markDirty() {
+    super.markDirty()
     if (isServer) {
       isOutputEnabled = hasRedstoneCard
       isAbstractBusAvailable = hasAbstractBusCard
       ServerPacketSender.sendServerPresence(this)
     }
     else {
-      world.markBlockForRenderUpdate(x, y, z)
+      world.markBlockForUpdate(x, y, z)
     }
   }
 
@@ -434,7 +432,7 @@ class ServerRack extends traits.PowerAcceptor with traits.Hub with traits.PowerB
 object ServerRack {
   val list = mutable.WeakHashMap.empty[ServerRack, Unit]
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldUnload(e: WorldEvent.Unload) {
     if (e.world.isRemote) {
       list.clear()

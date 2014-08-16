@@ -1,7 +1,6 @@
 package li.cil.oc.server.driver
 
 import java.util
-import java.util.logging.Level
 
 import li.cil.oc.api.driver.Converter
 import li.cil.oc.api.machine.Value
@@ -112,7 +111,7 @@ private[oc] object Registry extends api.detail.DriverAPI {
         val converted = new util.HashMap[AnyRef, AnyRef]()
         memo += arg -> converted
         converters.foreach(converter => try converter.convert(arg, converted) catch {
-          case t: Throwable => OpenComputers.log.log(Level.WARNING, "Type converter threw an exception.", t)
+          case t: Throwable => OpenComputers.log.warn("Type converter threw an exception.", t)
         })
         if (converted.isEmpty) {
           memo += arg -> null

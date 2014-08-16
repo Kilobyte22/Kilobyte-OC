@@ -1,6 +1,7 @@
 package li.cil.oc.common.component
 
 import com.google.common.base.Strings
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.api.component.TextBuffer.ColorDepth
 import li.cil.oc.api.driver.Container
@@ -14,7 +15,6 @@ import li.cil.oc.util.{PackedColor, SideTracker}
 import li.cil.oc.{Settings, api, util}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.{ChunkEvent, WorldEvent}
 
 import scala.collection.convert.WrapAsScala._
@@ -403,9 +403,9 @@ class TextBuffer(val owner: Container) extends ManagedComponent with api.compone
 }
 
 object TextBuffer {
-  var clientBuffers = mutable.LinkedList.empty[TextBuffer]
+  var clientBuffers = mutable.ListBuffer.empty[TextBuffer]
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onChunkUnload(e: ChunkEvent.Unload) {
     val chunk = e.getChunk
     clientBuffers = clientBuffers.filter(t => {
@@ -417,7 +417,7 @@ object TextBuffer {
     })
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldUnload(e: WorldEvent.Unload) {
     clientBuffers = clientBuffers.filter(t => {
       val keep = t.owner.world != e.world
@@ -431,7 +431,7 @@ object TextBuffer {
   def registerClientBuffer(t: TextBuffer) {
     ClientPacketSender.sendTextBufferInit(t.proxy.nodeAddress)
     ClientComponentTracker.add(t.proxy.nodeAddress, t)
-    clientBuffers ++= mutable.LinkedList(t)
+    clientBuffers += t
   }
 
   abstract class Proxy {

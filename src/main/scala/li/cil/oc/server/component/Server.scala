@@ -87,7 +87,7 @@ class Server(val rack: tileentity.ServerRack, val number: Int) extends Owner {
   def save(nbt: NBTTagCompound) {
     nbt.setNewCompoundTag("machine", machine.save)
     inventory.saveComponents()
-    inventory.onInventoryChanged()
+    inventory.markDirty()
   }
 
   // Required due to abstract overrides in component inventory.

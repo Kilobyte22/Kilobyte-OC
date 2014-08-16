@@ -5,22 +5,22 @@ import java.util
 import cpw.mods.fml.common.Optional
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import li.cil.oc.Settings
-import li.cil.oc.common.tileentity
-import li.cil.oc.common.tileentity.traits.Inventory
+import li.cil.oc.common.tileentity.traits.{Colored, Inventory}
 import li.cil.oc.util.Tooltip
 import li.cil.oc.util.mods.Mods
 import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
+import net.minecraft.block.Block
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.{Entity, EntityLivingBase}
 import net.minecraft.item.{EnumRarity, ItemStack}
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.{IBlockAccess, World}
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 trait Delegate {
-  type Icon = net.minecraft.util.Icon
-  type IconRegister = net.minecraft.client.renderer.texture.IconRegister
+  type Icon = net.minecraft.util.IIcon
+  type IconRegister = net.minecraft.client.renderer.texture.IIconRegister
 
   def unlocalizedName = getClass.getSimpleName
 
@@ -35,7 +35,7 @@ trait Delegate {
   protected def customTextures = Array.fill[Option[String]](6)(None)
 
   def setBlock(world: World, x: Int, y: Int, z: Int, flags: Int) = {
-    world.setBlock(x, y, z, parent.blockID, blockId, flags)
+    world.setBlock(x, y, z, parent, blockId, flags)
   }
 
   def createItemStack(amount: Int = 1) = new ItemStack(parent, amount, itemDamage)
@@ -50,16 +50,18 @@ trait Delegate {
 
   def explosionResistance(entity: Entity): Float = parent.getExplosionResistance(entity)
 
-  def isAir(world: World, x: Int, y: Int, z: Int) = false
+  def isAir(world: IBlockAccess, x: Int, y: Int, z: Int) = false
 
-  def isNormalCube(world: World, x: Int, y: Int, z: Int) = true
+  def isNormalCube(world: IBlockAccess, x: Int, y: Int, z: Int) = true
 
   def validRotations(world: World, x: Int, y: Int, z: Int) = validRotations_
 
-  def canPlaceBlockOnSide(world: World, x: Int, y: Int, z: Int, side: ForgeDirection) = true
+  // DEPRECATED Seems this isn't available anymore with stack info, use real
+  // items in 1.7 when needed since IDs are no problem anymore.
+  //  def canPlaceBlockOnSide(world: World, x: Int, y: Int, z: Int, side: ForgeDirection) = true
 
   def bounds(world: IBlockAccess, x: Int, y: Int, z: Int) =
-    AxisAlignedBB.getAABBPool.getAABB(0, 0, 0, 1, 1, 1)
+    AxisAlignedBB.getBoundingBox(0, 0, 0, 1, 1, 1)
 
   def updateBounds(world: IBlockAccess, x: Int, y: Int, z: Int) =
     parent.setBlockBounds(bounds(world, x, y, z))
@@ -90,18 +92,18 @@ trait Delegate {
   def addedByEntity(world: World, x: Int, y: Int, z: Int, player: EntityLivingBase, stack: ItemStack) {}
 
   def aboutToBeRemoved(world: World, x: Int, y: Int, z: Int) =
-    if (!world.isRemote) world.getBlockTileEntity(x, y, z) match {
+    if (!world.isRemote) world.getTileEntity(x, y, z) match {
       case inventory: Inventory => inventory.dropAllSlots()
       case _ => // Ignore.
     }
 
-  def removedFromWorld(world: World, x: Int, y: Int, z: Int, blockId: Int) {}
+  def removedFromWorld(world: World, x: Int, y: Int, z: Int, block: Block) {}
 
   def removedByEntity(world: World, x: Int, y: Int, z: Int, player: EntityPlayer) = true
 
-  def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, blockId: Int) {}
+  def neighborBlockChanged(world: World, x: Int, y: Int, z: Int, block: Block) {}
 
-  def neighborTileChanged(world: World, x: Int, y: Int, z: Int, tileX: Int, tileY: Int, tileZ: Int) {}
+  def neighborTileChanged(world: IBlockAccess, x: Int, y: Int, z: Int, tileX: Int, tileY: Int, tileZ: Int) {}
 
   def leftClick(world: World, x: Int, y: Int, z: Int, player: EntityPlayer) {}
 
@@ -124,7 +126,7 @@ trait Delegate {
   def wailaBody(stack: ItemStack, tooltip: util.List[String], accessor: IWailaDataAccessor, config: IWailaConfigHandler) {
   }
 
-  def opacity(world: World, x: Int, y: Int, z: Int) = 255
+  def opacity(world: IBlockAccess, x: Int, y: Int, z: Int) = 255
 
   def luminance(world: IBlockAccess, x: Int, y: Int, z: Int) = 0
 
@@ -136,8 +138,8 @@ trait Delegate {
 
   @SideOnly(Side.CLIENT)
   def color(world: IBlockAccess, x: Int, y: Int, z: Int): Int =
-    world.getBlockTileEntity(x, y, z) match {
-      case colored: tileentity.traits.Colored => colored.color
+    world.getTileEntity(x, y, z) match {
+      case colored: Colored => colored.color
       case _ => color
     }
 
@@ -192,5 +194,5 @@ trait SpecialDelegate extends Delegate {
 
   @SideOnly(Side.CLIENT)
   def shouldSideBeRendered(world: IBlockAccess, x: Int, y: Int, z: Int, side: ForgeDirection) =
-    !world.isBlockOpaqueCube(x, y, z)
+    !world.isSideSolid(x, y, z, side, true)
 }

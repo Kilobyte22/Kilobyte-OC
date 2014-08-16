@@ -1,7 +1,6 @@
 package li.cil.oc.server.component.machine
 
 import java.io.{FileNotFoundException, IOException}
-import java.util.logging.Level
 
 import com.google.common.base.Strings
 import com.naef.jnlua._
@@ -48,7 +47,7 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
   catch {
     case e: Throwable =>
       if (Settings.get.logLuaCallbackErrors && !e.isInstanceOf[LimitReachedException]) {
-        OpenComputers.log.log(Level.WARNING, "Exception in Lua callback.", e)
+        OpenComputers.log.warn("Exception in Lua callback.", e)
       }
       e match {
         case _: LimitReachedException =>
@@ -62,7 +61,7 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
           lua.pushNil()
           lua.pushString(e.getMessage)
           if (Settings.get.logLuaCallbackErrors) {
-            lua.pushString(e.getStackTraceString.replace("\r\n", "\n"))
+            lua.pushString(e.getStackTrace.mkString("", "\n", "\n"))
             4
           }
           else 3
@@ -98,7 +97,7 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
           lua.pushString("unsupported operation")
           2
         case e: Throwable =>
-          OpenComputers.log.log(Level.WARNING, "Unexpected error in Lua callback.", e)
+          OpenComputers.log.warn("Unexpected error in Lua callback.", e)
           lua.pushBoolean(true)
           lua.pushNil()
           lua.pushString("unknown error")
@@ -237,11 +236,11 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
         assert(lua.isThread(1))
         // We're expecting the result of a pcall, if anything, so boolean + (result | string).
         if (!lua.isBoolean(2) || !(lua.isString(3) || lua.isNoneOrNil(3))) {
-          OpenComputers.log.warning("Kernel returned unexpected results.")
+          OpenComputers.log.warn("Kernel returned unexpected results.")
         }
         // The pcall *should* never return normally... but check for it nonetheless.
         if (lua.toBoolean(2)) {
-          OpenComputers.log.warning("Kernel stopped unexpectedly.")
+          OpenComputers.log.warn("Kernel stopped unexpectedly.")
           new ExecutionResult.Shutdown(false)
         }
         else {
@@ -258,7 +257,7 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
     }
     catch {
       case e: LuaRuntimeException =>
-       OpenComputers.log.warning("Kernel crashed. This is a bug!\n" + e.toString + "\tat " + e.getLuaStackTrace.mkString("\n\tat "))
+        OpenComputers.log.warn("Kernel crashed. This is a bug!\n" + e.toString + "\tat " + e.getLuaStackTrace.mkString("\n\tat "))
         new ExecutionResult.Error("kernel panic: this is a bug, check your log file and report it")
       case e: LuaGcMetamethodException =>
         if (e.getMessage != null) new ExecutionResult.Error("kernel panic:\n" + e.getMessage)
@@ -350,12 +349,12 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
 
       try lua.gc(LuaState.GcAction.COLLECT, 0) catch {
         case t: Throwable =>
-          OpenComputers.log.warning(s"Error cleaning up loaded computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}). This either means the server is badly overloaded or a user created an evil __gc method, accidentally or not.")
+          OpenComputers.log.warn(s"Error cleaning up loaded computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}). This either means the server is badly overloaded or a user created an evil __gc method, accidentally or not.")
           machine.crash("error in garbage collector, most likely __gc method timed out")
       }
     } catch {
       case e: LuaRuntimeException =>
-        OpenComputers.log.warning(s"Could not unpersist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}" + (if (e.getLuaStackTrace.isEmpty) "" else "\tat " + e.getLuaStackTrace.mkString("\n\tat ")))
+        OpenComputers.log.warn(s"Could not unpersist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}" + (if (e.getLuaStackTrace.isEmpty) "" else "\tat " + e.getLuaStackTrace.mkString("\n\tat ")))
         machine.stop()
         machine.start()
     }
@@ -395,15 +394,15 @@ class NativeLuaArchitecture(val machine: api.machine.Machine) extends Architectu
 
       try lua.gc(LuaState.GcAction.COLLECT, 0) catch {
         case t: Throwable =>
-          OpenComputers.log.warning(s"Error cleaning up loaded computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}). This either means the server is badly overloaded or a user created an evil __gc method, accidentally or not.")
+          OpenComputers.log.warn(s"Error cleaning up loaded computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}). This either means the server is badly overloaded or a user created an evil __gc method, accidentally or not.")
           machine.crash("error in garbage collector, most likely __gc method timed out")
       }
     } catch {
       case e: LuaRuntimeException =>
-        OpenComputers.log.warning(s"Could not persist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}" + (if (e.getLuaStackTrace.isEmpty) "" else "\tat " + e.getLuaStackTrace.mkString("\n\tat ")))
+        OpenComputers.log.warn(s"Could not persist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}" + (if (e.getLuaStackTrace.isEmpty) "" else "\tat " + e.getLuaStackTrace.mkString("\n\tat ")))
         nbt.removeTag("state")
       case e: LuaGcMetamethodException =>
-        OpenComputers.log.warning(s"Could not persist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}")
+        OpenComputers.log.warn(s"Could not persist computer @ (${machine.owner.x}, ${machine.owner.y}, ${machine.owner.z}).\n${e.toString}")
         nbt.removeTag("state")
     }
 

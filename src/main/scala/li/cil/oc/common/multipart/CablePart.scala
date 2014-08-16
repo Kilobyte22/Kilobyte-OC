@@ -1,6 +1,5 @@
 package li.cil.oc.common.multipart
 
-import codechicken.lib.lighting.LazyLightMatrix
 import codechicken.lib.vec.{Cuboid6, Vector3}
 import codechicken.multipart._
 import cpw.mods.fml.relauncher.{Side, SideOnly}
@@ -11,6 +10,7 @@ import li.cil.oc.common.block.{Cable, Delegator}
 import li.cil.oc.util.ExtendedNBT._
 import li.cil.oc.{Settings, api, common}
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.RenderBlocks
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.AxisAlignedBB
 
@@ -66,12 +66,14 @@ class CablePart(val original: Option[Node] = None) extends DelegatePart with TCu
   }
 
   @SideOnly(Side.CLIENT)
-  override def renderStatic(pos: Vector3, olm: LazyLightMatrix, pass: Int) {
+  override def renderStatic(pos: Vector3, pass: Int) = {
     val (x, y, z) = (pos.x.toInt, pos.y.toInt, pos.z.toInt)
     val block = api.Items.get("cable").block()
     val metadata = world.getBlockMetadata(x, y, z)
-    val renderer = Minecraft.getMinecraft.renderGlobal.globalRenderBlocks
+    val renderer = RenderBlocks.getInstance
+    renderer.blockAccess = world
     BlockRenderer.renderCable(Cable.neighbors(world, x, y, z), block, metadata, x, y, z, renderer)
+    true
   }
 
   override def onMessage(message: Message) {}

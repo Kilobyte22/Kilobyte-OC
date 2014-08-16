@@ -2,12 +2,12 @@ package li.cil.oc.common.event
 
 import java.util
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.api.event.RobotMoveEvent
 import li.cil.oc.server.component.UpgradeChunkloader
 import net.minecraft.world.{ChunkCoordIntPair, World}
 import net.minecraftforge.common.ForgeChunkManager
 import net.minecraftforge.common.ForgeChunkManager.{LoadingCallback, Ticket}
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.WorldEvent
 
 import scala.collection.convert.WrapAsScala._
@@ -28,7 +28,7 @@ object ChunkloaderUpgradeHandler extends LoadingCallback {
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldSave(e: WorldEvent.Save) {
     // Any tickets that were not reassigned by the time the world gets saved
     // again can be considered orphaned, so we release them.
@@ -48,7 +48,7 @@ object ChunkloaderUpgradeHandler extends LoadingCallback {
   // is that the access to the block in the direction the robot moves causes
   // the chunk it might move into to get loaded.
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onMove(e: RobotMoveEvent.Post) {
     for (slot <- 0 until e.robot.getSizeInventory) {
       e.robot.getComponentInSlot(slot) match {

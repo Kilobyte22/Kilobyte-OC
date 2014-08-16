@@ -1,11 +1,10 @@
 package li.cil.oc.server.network
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import li.cil.oc.Settings
 import li.cil.oc.api.network.WirelessEndpoint
 import li.cil.oc.util.RTree
-import net.minecraft.block.Block
 import net.minecraft.util.Vec3
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.{ChunkEvent, WorldEvent}
 
 import scala.collection.convert.WrapAsScala._
@@ -14,14 +13,14 @@ import scala.collection.mutable
 object WirelessNetwork {
   val dimensions = mutable.Map.empty[Int, RTree[WirelessEndpoint]]
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldUnload(e: WorldEvent.Unload) {
     if (!e.world.isRemote) {
       dimensions.remove(e.world.provider.dimensionId)
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldLoad(e: WorldEvent.Load) {
     if (!e.world.isRemote) {
       dimensions.remove(e.world.provider.dimensionId)
@@ -29,7 +28,7 @@ object WirelessNetwork {
   }
 
   // Safety clean up, in case some tile entities didn't properly leave the net.
-  @ForgeSubscribe
+  @SubscribeEvent
   def onChunkUnload(e: ChunkEvent.Unload) {
     e.getChunk.chunkTileEntityMap.values.foreach {
       case endpoint: WirelessEndpoint => remove(endpoint)
@@ -106,10 +105,9 @@ object WirelessNetwork {
       // we reach a point where the surplus strength does not suffice we block
       // the message.
       val world = endpoint.world
-      val pool = world.getWorldVec3Pool
 
-      val origin = pool.getVecFromPool(reference.x, reference.y, reference.z)
-      val target = pool.getVecFromPool(endpoint.x, endpoint.y, endpoint.z)
+      val origin = Vec3.createVectorHelper(reference.x, reference.y, reference.z)
+      val target = Vec3.createVectorHelper(endpoint.x, endpoint.y, endpoint.z)
 
       // Vector from reference endpoint (sender) to this one (receiver).
       val delta = subtract(target, origin)
@@ -118,10 +116,10 @@ object WirelessNetwork {
       // Get the vectors that are orthogonal to the direction vector.
       val up = if (v.xCoord == 0 && v.zCoord == 0) {
         assert(v.yCoord != 0)
-        pool.getVecFromPool(1, 0, 0)
+        Vec3.createVectorHelper(1, 0, 0)
       }
       else {
-        pool.getVecFromPool(0, 1, 0)
+        Vec3.createVectorHelper(0, 1, 0)
       }
       val side = crossProduct(v, up)
       val top = crossProduct(v, side)
@@ -139,8 +137,8 @@ object WirelessNetwork {
         val x = (origin.xCoord + v.xCoord * rGap + side.xCoord * rSide + top.xCoord * rTop).toInt
         val y = (origin.yCoord + v.yCoord * rGap + side.yCoord * rSide + top.yCoord * rTop).toInt
         val z = (origin.zCoord + v.zCoord * rGap + side.zCoord * rSide + top.zCoord * rTop).toInt
-        Option(Block.blocksList(world.getBlockId(x, y, z))) match {
-          case Some(block) => hardness += block.blockHardness
+        Option(world.getBlock(x, y, z)) match {
+          case Some(block) => hardness += block.getBlockHardness(world, x, y, z)
           case _ =>
         }
       }
@@ -154,7 +152,7 @@ object WirelessNetwork {
     else true
   }
 
-  private def subtract(v1: Vec3, v2: Vec3) = v1.myVec3LocalPool.getVecFromPool(v1.xCoord - v2.xCoord, v1.yCoord - v2.yCoord, v1.zCoord - v2.zCoord)
+  private def subtract(v1: Vec3, v2: Vec3) = Vec3.createVectorHelper(v1.xCoord - v2.xCoord, v1.yCoord - v2.yCoord, v1.zCoord - v2.zCoord)
 
-  private def crossProduct(v1: Vec3, v2: Vec3) = v1.myVec3LocalPool.getVecFromPool(v1.yCoord * v2.zCoord - v1.zCoord * v2.yCoord, v1.zCoord * v2.xCoord - v1.xCoord * v2.zCoord, v1.xCoord * v2.yCoord - v1.yCoord * v2.xCoord)
+  private def crossProduct(v1: Vec3, v2: Vec3) = Vec3.createVectorHelper(v1.yCoord * v2.zCoord - v1.zCoord * v2.yCoord, v1.zCoord * v2.xCoord - v1.xCoord * v2.zCoord, v1.xCoord * v2.yCoord - v1.yCoord * v2.xCoord)
 }

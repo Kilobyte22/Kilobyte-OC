@@ -21,10 +21,10 @@ class ImageButton(id: Int, x: Int, y: Int, w: Int, h: Int,
   var hoverOverride = false
 
   override def drawButton(mc: Minecraft, mouseX: Int, mouseY: Int) {
-    if (drawButton) {
+    if (visible) {
       mc.renderEngine.bindTexture(image)
       GL11.glColor4f(1, 1, 1, 1)
-      field_82253_i = mouseX >= xPosition && mouseY >= yPosition && mouseX < xPosition + width && mouseY < yPosition + height
+      field_146123_n = mouseX >= xPosition && mouseY >= yPosition && mouseX < xPosition + width && mouseY < yPosition + height
 
       val x0 = xPosition
       val x1 = xPosition + width
@@ -33,7 +33,7 @@ class ImageButton(id: Int, x: Int, y: Int, w: Int, h: Int,
 
       val u0 = if (toggled) 0.5 else 0
       val u1 = u0 + (if (canToggle) 0.5 else 1)
-      val v0 = if (hoverOverride || getHoverState(field_82253_i) == 2) 0.5 else 0
+      val v0 = if (hoverOverride || getHoverState(field_146123_n) == 2) 0.5 else 0
       val v1 = v0 + 0.5
 
       val t = Tessellator.instance
@@ -47,7 +47,7 @@ class ImageButton(id: Int, x: Int, y: Int, w: Int, h: Int,
       if (displayString != null) {
         val color =
           if (!enabled) textDisabledColor
-          else if (hoverOverride || field_82253_i) textHoverColor
+          else if (hoverOverride || field_146123_n) textHoverColor
           else textColor
         if (textIndent >= 0) drawString(mc.fontRenderer, displayString, textIndent + xPosition, yPosition + (height - 8) / 2, color)
         else drawCenteredString(mc.fontRenderer, displayString, xPosition + width / 2, yPosition + (height - 8) / 2, color)

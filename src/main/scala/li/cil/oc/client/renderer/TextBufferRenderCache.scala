@@ -1,10 +1,10 @@
 package li.cil.oc.client.renderer
 
-import java.util
 import java.util.concurrent.{Callable, TimeUnit}
 
 import com.google.common.cache.{CacheBuilder, RemovalListener, RemovalNotification}
-import cpw.mods.fml.common.{ITickHandler, TickType}
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent
 import li.cil.oc.Settings
 import li.cil.oc.common.component.TextBuffer
 import li.cil.oc.util.RenderState
@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.GLAllocation
 import net.minecraft.tileentity.TileEntity
 import org.lwjgl.opengl.GL11
 
-object TextBufferRenderCache extends Callable[Int] with RemovalListener[TileEntity, Int] with ITickHandler {
+object TextBufferRenderCache extends Callable[Int] with RemovalListener[TileEntity, Int] {
   val renderer =
     if (Settings.get.useOldTextureFontRenderer) new font.StaticFontRenderer()
     else new font.DynamicFontRenderer()
@@ -100,11 +100,6 @@ object TextBufferRenderCache extends Callable[Int] with RemovalListener[TileEnti
   // ITickHandler
   // ----------------------------------------------------------------------- //
 
-  def getLabel = "OpenComputers.TextBufferRenderer"
-
-  def ticks = util.EnumSet.of(TickType.CLIENT)
-
-  def tickStart(tickType: util.EnumSet[TickType], tickData: AnyRef*) = cache.cleanUp()
-
-  def tickEnd(tickType: util.EnumSet[TickType], tickData: AnyRef*) {}
+  @SubscribeEvent
+  def onTick(e: ClientTickEvent) = cache.cleanUp()
 }

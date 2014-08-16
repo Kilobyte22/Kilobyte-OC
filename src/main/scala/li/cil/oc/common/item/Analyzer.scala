@@ -6,13 +6,13 @@ import li.cil.oc.server.PacketSender
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.item.ItemStack
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 
 class Analyzer(val parent: Delegator) extends Delegate {
   override def onItemUse(stack: ItemStack, player: EntityPlayer, world: World, x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float, hitZ: Float) = {
     player match {
       case realPlayer: EntityPlayerMP =>
-        world.getBlockTileEntity(x, y, z) match {
+        world.getTileEntity(x, y, z) match {
           case analyzable: Analyzable =>
             if (!world.isRemote) {
               analyzeNodes(analyzable.onAnalyze(realPlayer, side, hitX, hitY, hitZ), realPlayer)
@@ -38,19 +38,19 @@ class Analyzer(val parent: Delegator) extends Delegate {
     node match {
       case connector: Connector =>
         if (connector.localBufferSize > 0) {
-          player.sendChatToPlayer(Localization.Analyzer.StoredEnergy("%.2f/%.2f".format(connector.localBuffer, connector.localBufferSize)))
+          player.addChatMessage(Localization.Analyzer.StoredEnergy("%.2f/%.2f".format(connector.localBuffer, connector.localBufferSize)))
         }
-        player.sendChatToPlayer(Localization.Analyzer.TotalEnergy("%.2f/%.2f".format(connector.globalBuffer, connector.globalBufferSize)))
+        player.addChatMessage(Localization.Analyzer.TotalEnergy("%.2f/%.2f".format(connector.globalBuffer, connector.globalBufferSize)))
       case _ =>
     }
     node match {
       case component: Component =>
-        player.sendChatToPlayer(Localization.Analyzer.ComponentName(component.name))
+        player.addChatMessage(Localization.Analyzer.ComponentName(component.name))
       case _ =>
     }
     val address = node.address()
     if (address != null && !address.isEmpty) {
-      player.sendChatToPlayer(Localization.Analyzer.Address(address))
+      player.addChatMessage(Localization.Analyzer.Address(address))
       PacketSender.sendAnalyze(address, player)
     }
   }

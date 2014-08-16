@@ -1,32 +1,47 @@
 package li.cil.oc.server.component.robot
 
-import java.util.logging.Level
+import java.util.UUID
 
+import com.mojang.authlib.GameProfile
 import cpw.mods.fml.common.ObfuscationReflectionHelper
+import cpw.mods.fml.common.eventhandler.Event
 import li.cil.oc.api.event._
 import li.cil.oc.common.tileentity
 import li.cil.oc.util.mods.{Mods, PortalGun, TinkersConstruct}
 import li.cil.oc.{OpenComputers, Settings}
-import net.minecraft.block.{Block, BlockFluid, BlockPistonBase}
+import net.minecraft.block.{Block, BlockPistonBase}
 import net.minecraft.entity.item.EntityItem
-import net.minecraft.entity.player.{EntityPlayer, EnumStatus}
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.EntityPlayer.EnumStatus
 import net.minecraft.entity.{Entity, EntityLivingBase, IMerchant}
-import net.minecraft.item.{Item, ItemBlock, ItemStack}
+import net.minecraft.init.{Blocks, Items}
+import net.minecraft.item.{ItemBlock, ItemStack}
 import net.minecraft.potion.PotionEffect
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util._
 import net.minecraft.world.WorldServer
-import net.minecraftforge.common.{FakePlayer, ForgeDirection, ForgeHooks, MinecraftForge}
+import net.minecraftforge.common.util.{FakePlayer, ForgeDirection}
+import net.minecraftforge.common.{ForgeHooks, MinecraftForge}
+import net.minecraftforge.event.ForgeEventFactory
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.Action
 import net.minecraftforge.event.entity.player.{EntityInteractEvent, PlayerInteractEvent}
 import net.minecraftforge.event.world.BlockEvent
-import net.minecraftforge.event.{Event, ForgeEventFactory}
 import net.minecraftforge.fluids.FluidRegistry
 
 import scala.collection.convert.WrapAsScala._
 import scala.reflect._
 
-class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInstanceOf[WorldServer], Settings.get.nameFormat.replace("$player$", robot.owner).replace("$random$", (robot.world.rand.nextInt(0xFFFFFF) + 1).toString)) {
+object Player {
+  def profileFor(robot: tileentity.Robot) = {
+    val randomId = (robot.world.rand.nextInt(0xFFFFFF) + 1).toString
+    val name = Settings.get.nameFormat.
+      replace("$player$", robot.owner).
+      replace("$random$", randomId)
+    new GameProfile(UUID.randomUUID(), name)
+  }
+}
+
+class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInstanceOf[WorldServer], Player.profileFor(robot)) {
   capabilities.allowFlying = true
   capabilities.disableDamage = true
   capabilities.isFlying = true
@@ -73,7 +88,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   def closestEntity[Type <: Entity : ClassTag](side: ForgeDirection = facing) = {
     val (x, y, z) = (robot.x + side.offsetX, robot.y + side.offsetY, robot.z + side.offsetZ)
-    val bounds = AxisAlignedBB.getAABBPool.getAABB(x, y, z, x + 1, y + 1, z + 1)
+    val bounds = AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1)
     Option(world.findNearestEntityWithinAABB(classTag[Type].runtimeClass, bounds, this)).map(_.asInstanceOf[Type])
   }
 
@@ -83,12 +98,12 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
   }
 
   def entitiesInBlock[Type <: Entity : ClassTag](x: Int, y: Int, z: Int) = {
-    val bounds = AxisAlignedBB.getAABBPool.getAABB(x, y, z, x + 1, y + 1, z + 1)
+    val bounds = AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1)
     world.getEntitiesWithinAABB(classTag[Type].runtimeClass, bounds).map(_.asInstanceOf[Type])
   }
 
   private def adjacentItems = {
-    val bounds = AxisAlignedBB.getAABBPool.getAABB(robot.x - 2, robot.y - 2, robot.z - 2, robot.x + 3, robot.y + 3, robot.z + 3)
+    val bounds = AxisAlignedBB.getBoundingBox(robot.x - 2, robot.y - 2, robot.z - 2, robot.x + 3, robot.y + 3, robot.z + 3)
     world.getEntitiesWithinAABB(classOf[EntityItem], bounds).map(_.asInstanceOf[EntityItem])
   }
 
@@ -120,7 +135,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
     val cancel = try MinecraftForge.EVENT_BUS.post(new EntityInteractEvent(this, entity)) catch {
       case t: Throwable =>
         if (!t.getStackTrace.exists(_.getClassName.startsWith("mods.battlegear2."))) {
-          OpenComputers.log.log(Level.WARNING, "Some event handler screwed up!", t)
+          OpenComputers.log.warn("Some event handler screwed up!", t)
         }
         false
     }
@@ -128,7 +143,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
       val current = getCurrentEquippedItem
 
       val result = isItemUseAllowed(stack) && (entity.interactFirst(this) || (entity match {
-        case living: EntityLivingBase if current != null => current.func_111282_a(this, living)
+        case living: EntityLivingBase if current != null => current.interactWithEntity(this, living)
         case _ => false
       }))
       if (current != null && current.stackSize <= 0) {
@@ -140,7 +155,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   def activateBlockOrUseItem(x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float, hitZ: Float, duration: Double): ActivationType.Value = {
     callUsingItemInSlot(0, stack => {
-      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_BLOCK, x, y, z, side))) {
+      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_BLOCK, x, y, z, side, world))) {
         return ActivationType.None
       }
 
@@ -151,10 +166,9 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
         }
       }
 
-      val blockId = world.getBlockId(x, y, z)
-      val block = Block.blocksList(blockId)
+      val block = world.getBlock(x, y, z)
       val canActivate = block != null && Settings.get.allowActivateBlocks
-      val shouldActivate = canActivate && (!isSneaking || (item == null || item.shouldPassSneakingClickToBlock(world, x, y, z)))
+      val shouldActivate = canActivate && (!isSneaking || (item == null || item.doesSneakBypassUse(world, x, y, z, this)))
       val result =
         if (shouldActivate && block.onBlockActivated(world, x, y, z, this, side, hitX, hitY, hitZ))
           ActivationType.BlockActivated
@@ -171,7 +185,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   def useEquippedItem(duration: Double) = {
     callUsingItemInSlot(0, stack => {
-      if (!shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_AIR, 0, 0, 0, ForgeDirection.UNKNOWN.ordinal))) {
+      if (!shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_AIR, 0, 0, 0, ForgeDirection.UNKNOWN.ordinal, world))) {
         tryUseItem(stack, duration)
       }
       else false
@@ -215,7 +229,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   def placeBlock(slot: Int, x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float, hitZ: Float): Boolean = {
     callUsingItemInSlot(slot, stack => {
-      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_BLOCK, x, y, z, side))) {
+      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.RIGHT_CLICK_BLOCK, x, y, z, side, world))) {
         return false
       }
 
@@ -225,7 +239,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   def clickBlock(x: Int, y: Int, z: Int, side: Int): Double = {
     callUsingItemInSlot(0, stack => {
-      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.LEFT_CLICK_BLOCK, x, y, z, side))) {
+      if (shouldCancel(() => ForgeEventFactory.onPlayerInteract(this, Action.LEFT_CLICK_BLOCK, x, y, z, side, world))) {
         return 0
       }
 
@@ -234,14 +248,12 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
         return 0
       }
 
-      val blockId = world.getBlockId(x, y, z)
-      val block = Block.blocksList(blockId)
+      val block = world.getBlock(x, y, z)
       val metadata = world.getBlockMetadata(x, y, z)
-      val mayClickBlock = blockId > 0 && block != null
+      val mayClickBlock = block != null
       val canClickBlock = mayClickBlock &&
-        !block.isAirBlock(world, x, y, z) &&
-        FluidRegistry.lookupFluidForBlock(block) == null &&
-        !block.isInstanceOf[BlockFluid]
+        !block.isAir(world, x, y, z) &&
+        FluidRegistry.lookupFluidForBlock(block) == null
       if (!canClickBlock) {
         return 0
       }
@@ -265,14 +277,14 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
         return 0
       }
 
-      val cobwebOverride = block == Block.web && Settings.get.screwCobwebs
+      val cobwebOverride = block == Blocks.web && Settings.get.screwCobwebs
 
       if (!ForgeHooks.canHarvestBlock(block, this, metadata) && !cobwebOverride) {
         return 0
       }
 
       val hardness = block.getBlockHardness(world, x, y, z)
-      val strength = getCurrentPlayerStrVsBlock(block, false, metadata)
+      val strength = getBreakSpeed(block, false, metadata, x, y, z)
       val breakTime =
         if (cobwebOverride) Settings.get.swingDelay
         else hardness * 1.5 / strength
@@ -300,14 +312,14 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
         return 0
       }
 
-      world.playAuxSFXAtEntity(this, 2001, x, y, z, blockId + (metadata << 12))
+      world.playAuxSFXAtEntity(this, 2001, x, y, z, Block.getIdFromBlock(block) + (metadata << 12))
 
       if (stack != null) {
-        stack.onBlockDestroyed(world, blockId, x, y, z, this)
+        stack.func_150999_a(world, block, x, y, z, this)
       }
 
       block.onBlockHarvested(world, x, y, z, metadata, this)
-      if (block.removeBlockByPlayer(world, this, x, y, z)) {
+      if (block.removedByPlayer(world, this, x, y, z, block.canHarvestBlock(this, metadata))) {
         block.onBlockDestroyedByPlayer(world, x, y, z, metadata)
         // Note: the block has been destroyed by `removeBlockByPlayer`. This
         // check only serves to test whether the block can drop anything at all.
@@ -327,7 +339,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
   private def isItemUseAllowed(stack: ItemStack) = stack == null || {
     (Settings.get.allowUseItemsWithDuration || stack.getMaxItemUseDuration <= 0) &&
       (!PortalGun.isPortalGun(stack) || PortalGun.isStandardPortalGun(stack)) &&
-      !stack.isItemEqual(new ItemStack(Item.leash))
+      !stack.isItemEqual(new ItemStack(Items.lead))
   }
 
   override def dropPlayerItemWithRandomChoice(stack: ItemStack, inPlace: Boolean) =
@@ -341,7 +353,7 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
     catch {
       case t: Throwable =>
         if (!t.getStackTrace.exists(_.getClassName.startsWith("mods.battlegear2."))) {
-          OpenComputers.log.log(Level.WARNING, "Some event handler screwed up!", t)
+          OpenComputers.log.warn("Some event handler screwed up!", t)
         }
         false
     }
@@ -400,8 +412,8 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
 
   private def isSomeKindOfPiston(stack: ItemStack) =
     stack.getItem match {
-      case itemBlock: ItemBlock if itemBlock.getBlockID > 0 =>
-        val block = Block.blocksList(itemBlock.getBlockID)
+      case itemBlock: ItemBlock =>
+        val block = itemBlock.field_150939_a
         block != null && block.isInstanceOf[BlockPistonBase]
       case _ => false
     }
@@ -462,4 +474,6 @@ class Player(val robot: tileentity.Robot) extends FakePlayer(robot.world.asInsta
   override def mountEntity(entity: Entity) {}
 
   override def sleepInBedAt(x: Int, y: Int, z: Int) = EnumStatus.OTHER_PROBLEM
+
+  override def addChatMessage(message: IChatComponent) {}
 }

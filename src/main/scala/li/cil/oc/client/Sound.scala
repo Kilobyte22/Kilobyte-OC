@@ -1,16 +1,19 @@
 package li.cil.oc.client
 
-import java.util.logging.Level
+import java.net.{MalformedURLException, URL, URLConnection, URLStreamHandler}
 import java.util.{Timer, TimerTask, UUID}
 
 import cpw.mods.fml.client.FMLClientHandler
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.relauncher.ReflectionHelper
 import li.cil.oc.{OpenComputers, Settings}
 import net.minecraft.client.Minecraft
+import net.minecraft.client.audio.{SoundCategory, SoundManager, SoundPoolEntry}
 import net.minecraft.tileentity.TileEntity
+import net.minecraft.util.ResourceLocation
 import net.minecraftforge.client.event.sound.SoundLoadEvent
-import net.minecraftforge.event.ForgeSubscribe
 import net.minecraftforge.event.world.WorldEvent
-import paulscode.sound.SoundSystemConfig
+import paulscode.sound.{SoundSystem, SoundSystemConfig}
 
 import scala.collection.mutable
 
@@ -19,7 +22,7 @@ object Sound {
 
   private val commandQueue = mutable.PriorityQueue.empty[Command]
 
-  private var lastVolume = FMLClientHandler.instance.getClient.gameSettings.soundVolume
+  private var lastVolume = FMLClientHandler.instance.getClient.gameSettings.getSoundLevel(SoundCategory.BLOCKS)
 
   private val updateTimer = new Timer("OpenComputers-SoundUpdater", true)
   if (Settings.get.soundVolume > 0) {
@@ -31,10 +34,13 @@ object Sound {
     }, 500, 50)
   }
 
-  private def soundSystem = Minecraft.getMinecraft.sndManager.sndSystem
+  // Set in init event.
+  var manager: SoundManager = _
+
+  def soundSystem: SoundSystem = ReflectionHelper.getPrivateValue(classOf[SoundManager], manager, "sndSystem", "field_148620_e", "e")
 
   private def updateVolume() {
-    val volume = FMLClientHandler.instance.getClient.gameSettings.soundVolume
+    val volume = FMLClientHandler.instance.getClient.gameSettings.getSoundLevel(SoundCategory.BLOCKS)
     if (volume != lastVolume) {
       lastVolume = volume
       sources.synchronized {
@@ -46,11 +52,11 @@ object Sound {
   }
 
   private def processQueue() {
-    if (!commandQueue.isEmpty) {
+    if (commandQueue.nonEmpty) {
       commandQueue.synchronized {
-        while (!commandQueue.isEmpty && commandQueue.head.when < System.currentTimeMillis()) {
+        while (commandQueue.nonEmpty && commandQueue.head.when < System.currentTimeMillis()) {
           try commandQueue.dequeue()() catch {
-            case t: Throwable => OpenComputers.log.log(Level.WARNING, "Error processing sound command.", t)
+            case t: Throwable => OpenComputers.log.warn("Error processing sound command.", t)
           }
         }
       }
@@ -81,21 +87,12 @@ object Sound {
     }
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onSoundLoad(event: SoundLoadEvent) {
-    for (i <- 1 to 6) {
-      event.manager.soundPoolSounds.addSound(Settings.resourceDomain + s":floppy_access$i.ogg")
-    }
-    for (i <- 1 to 7) {
-      event.manager.soundPoolSounds.addSound(Settings.resourceDomain + s":hdd_access$i.ogg")
-    }
-    event.manager.soundPoolSounds.addSound(Settings.resourceDomain + ":floppy_insert.ogg")
-    event.manager.soundPoolSounds.addSound(Settings.resourceDomain + ":floppy_eject.ogg")
-
-    event.manager.soundPoolSounds.addSound(Settings.resourceDomain + ":computer_running.ogg")
+    manager = event.manager
   }
 
-  @ForgeSubscribe
+  @SubscribeEvent
   def onWorldUnload(event: WorldEvent.Unload) {
     commandQueue.synchronized(commandQueue.clear())
     sources.synchronized {
@@ -158,10 +155,11 @@ object Sound {
 
     def play(name: String) {
       val resourceName = s"${Settings.resourceDomain}:$name"
-      val sound = Minecraft.getMinecraft.sndManager.soundPoolSounds.getRandomSoundFromSoundPool(resourceName)
+      val sound = Minecraft.getMinecraft.getSoundHandler.getSound(new ResourceLocation(resourceName))
+      val resource = (sound.func_148720_g: SoundPoolEntry).getSoundPoolEntryLocation
       if (!initialized) {
         initialized = true
-        soundSystem.newSource(false, source, sound.getSoundUrl, sound.getSoundName, true, tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord, SoundSystemConfig.ATTENUATION_LINEAR, 16)
+        soundSystem.newSource(false, source, toUrl(resource), resource.toString, true, tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord, SoundSystemConfig.ATTENUATION_LINEAR, 16)
         updateVolume()
         soundSystem.activate(source)
       }
@@ -179,4 +177,21 @@ object Sound {
     }
   }
 
+  // This is copied from SoundManager.getURLForSoundResource, which is private.
+  private def toUrl(resource: ResourceLocation): URL = {
+    val name = s"mcsounddomain:${resource.getResourceDomain}:${resource.getResourcePath}"
+    try {
+      new URL(null, name, new URLStreamHandler {
+        protected def openConnection(url: URL): URLConnection = new URLConnection(url) {
+          def connect() {
+          }
+
+          override def getInputStream = Minecraft.getMinecraft.getResourceManager.getResource(resource).getInputStream
+        }
+      })
+    }
+    catch {
+      case _: MalformedURLException => null
+    }
+  }
 }

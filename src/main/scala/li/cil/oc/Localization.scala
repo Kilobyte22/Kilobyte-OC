@@ -1,14 +1,14 @@
 package li.cil.oc
 
 import cpw.mods.fml.common.event.FMLFingerprintViolationEvent
-import net.minecraft.util.{ChatMessageComponent, StatCollector}
+import net.minecraft.util.{ChatComponentText, ChatComponentTranslation, StatCollector}
 
 object Localization {
-  private def resolveKey(key: String) = if (StatCollector.func_94522_b(Settings.namespace + key)) Settings.namespace + key else key
+  private def resolveKey(key: String) = if (StatCollector.canTranslate(Settings.namespace + key)) Settings.namespace + key else key
 
-  def localizeLater(formatKey: String, values: AnyRef*) = ChatMessageComponent.createFromTranslationWithSubstitutions(resolveKey(formatKey), values: _*)
+  def localizeLater(formatKey: String, values: AnyRef*) = new ChatComponentTranslation(resolveKey(formatKey), values: _*)
 
-  def localizeLater(key: String) = ChatMessageComponent.createFromTranslationKey(resolveKey(key))
+  def localizeLater(key: String) = new ChatComponentTranslation(resolveKey(key))
 
   def localizeImmediately(formatKey: String, values: AnyRef*) = StatCollector.translateToLocalFormatted(resolveKey(formatKey), values: _*)
 
@@ -43,15 +43,15 @@ object Localization {
   }
 
   object Chat {
-    def WarningLuaFallback = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningLuaFallback"))
+    def WarningLuaFallback = new ChatComponentText("§aOpenComputers§f: ").appendSibling(localizeLater("gui.Chat.WarningLuaFallback"))
 
-    def WarningProjectRed = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningProjectRed"))
+    def WarningProjectRed = new ChatComponentText("§aOpenComputers§f: ").appendSibling(localizeLater("gui.Chat.WarningProjectRed"))
 
-    def WarningPower = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningPower"))
+    def WarningPower = new ChatComponentText("§aOpenComputers§f: ").appendSibling(localizeLater("gui.Chat.WarningPower"))
 
-    def WarningFingerprint(event: FMLFingerprintViolationEvent) = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.WarningFingerprint", event.expectedFingerprint, event.fingerprints.toArray.mkString(", ")))
+    def WarningFingerprint(event: FMLFingerprintViolationEvent) = new ChatComponentText("§aOpenComputers§f: ").appendSibling(localizeLater("gui.Chat.WarningFingerprint", event.expectedFingerprint, event.fingerprints.toArray.mkString(", ")))
 
-    def InfoNewVersion(version: String) = ChatMessageComponent.createFromText("§aOpenComputers§f: ").appendComponent(localizeLater("gui.Chat.NewVersion", version))
+    def InfoNewVersion(version: String) = new ChatComponentText("§aOpenComputers§f: ").appendSibling(localizeLater("gui.Chat.NewVersion", version))
   }
 
   object Robot {
@@ -111,9 +111,9 @@ object Localization {
   }
 
   object Terminal {
-    def InvalidKey = localizeImmediately("gui.Terminal.InvalidKey")
+    def InvalidKey = localizeLater("gui.Terminal.InvalidKey")
 
-    def OutOfRange = localizeImmediately("gui.Terminal.OutOfRange")
+    def OutOfRange = localizeLater("gui.Terminal.OutOfRange")
   }
 
   object Tooltip {

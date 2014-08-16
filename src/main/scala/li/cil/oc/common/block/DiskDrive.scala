@@ -10,9 +10,9 @@ import li.cil.oc.{Localization, OpenComputers, Settings}
 import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.Constants.NBT
+import net.minecraftforge.common.util.ForgeDirection
 
 class DiskDrive(val parent: SimpleDelegator) extends SimpleDelegate {
   override protected def customTextures = Array(
@@ -33,15 +33,15 @@ class DiskDrive(val parent: SimpleDelegator) extends SimpleDelegate {
 
   @Optional.Method(modid = Mods.IDs.Waila)
   override def wailaBody(stack: ItemStack, tooltip: util.List[String], accessor: IWailaDataAccessor, config: IWailaConfigHandler) {
-    val items = accessor.getNBTData.getTagList(Settings.namespace + "items")
+    val items = accessor.getNBTData.getTagList(Settings.namespace + "items", NBT.TAG_COMPOUND)
     if (items.tagCount > 0) {
-      val node = items.tagAt(0).asInstanceOf[NBTTagCompound].
+      val node = items.getCompoundTagAt(0).
         getCompoundTag("item").
         getCompoundTag("tag").
         getCompoundTag(Settings.namespace + "data").
         getCompoundTag("node")
       if (node.hasKey("address")) {
-        tooltip.add(Localization.Analyzer.Address(node.getString("address")).toString)
+        tooltip.add(Localization.Analyzer.Address(node.getString("address")).getUnformattedTextForChat)
       }
     }
   }
@@ -56,7 +56,7 @@ class DiskDrive(val parent: SimpleDelegator) extends SimpleDelegate {
 
   override def rightClick(world: World, x: Int, y: Int, z: Int, player: EntityPlayer,
                           side: ForgeDirection, hitX: Float, hitY: Float, hitZ: Float) = {
-    world.getBlockTileEntity(x, y, z) match {
+    world.getTileEntity(x, y, z) match {
       case drive: tileentity.DiskDrive =>
         // Behavior: sneaking -> Insert[+Eject], not sneaking -> GUI.
         if (!player.isSneaking) {

@@ -1,6 +1,7 @@
 package li.cil.oc.client
 
-import cpw.mods.fml.common.network.Player
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.network.FMLNetworkEvent.ClientCustomPacketEvent
 import li.cil.oc.Localization
 import li.cil.oc.api.component
 import li.cil.oc.client.renderer.PetRenderer
@@ -8,19 +9,24 @@ import li.cil.oc.common.tileentity._
 import li.cil.oc.common.tileentity.traits._
 import li.cil.oc.common.{PacketType, PacketHandler => CommonPacketHandler}
 import li.cil.oc.util.Audio
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraftforge.common.ForgeDirection
+import net.minecraftforge.common.util.ForgeDirection
 import org.lwjgl.input.Keyboard
 
-class PacketHandler extends CommonPacketHandler {
-  protected override def world(player: Player, dimension: Int) = {
-    val world = player.asInstanceOf[EntityPlayer].worldObj
+object PacketHandler extends CommonPacketHandler {
+  @SubscribeEvent
+  def onPacket(e: ClientCustomPacketEvent) =
+    onPacketData(e.packet.payload, Minecraft.getMinecraft.thePlayer)
+
+  protected override def world(player: EntityPlayer, dimension: Int) = {
+    val world = player.worldObj
     if (world.provider.dimensionId == dimension) Some(world)
     else None
   }
 
-  override def dispatch(p: PacketParser) =
+  override def dispatch(p: PacketParser) {
     p.packetType match {
       case PacketType.AbstractBusState => onAbstractBusState(p)
       case PacketType.Analyze => onAnalyze(p)
@@ -60,6 +66,7 @@ class PacketHandler extends CommonPacketHandler {
       case PacketType.Sound => onSound(p)
       case _ => // Invalid packet.
     }
+  }
 
   def onAbstractBusState(p: PacketParser) =
     p.readTileEntity[AbstractBusAware]() match {
@@ -68,11 +75,10 @@ class PacketHandler extends CommonPacketHandler {
     }
 
   def onAnalyze(p: PacketParser) {
-    val player = p.player.asInstanceOf[EntityPlayer]
     val address = p.readUTF()
     if (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_LCONTROL)) {
       GuiScreen.setClipboardString(address)
-      player.sendChatToPlayer(Localization.Analyzer.AddressCopied)
+      p.player.addChatMessage(Localization.Analyzer.AddressCopied)
     }
   }
 
@@ -81,7 +87,7 @@ class PacketHandler extends CommonPacketHandler {
       case Some(t) =>
         t.chargeSpeed = p.readDouble()
         t.hasPower = p.readBoolean()
-        t.world.markBlockForRenderUpdate(t.x, t.y, t.z)
+        t.world.markBlockForUpdate(t.x, t.y, t.z)
       case _ => // Invalid packet.
     }
 
@@ -89,7 +95,7 @@ class PacketHandler extends CommonPacketHandler {
     p.readTileEntity[Colored]() match {
       case Some(t) =>
         t.color = p.readInt()
-        t.world.markBlockForRenderUpdate(t.x, t.y, t.z)
+        t.world.markBlockForUpdate(t.x, t.y, t.z)
       case _ => // Invalid packet.
     }
 
