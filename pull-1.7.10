@@ -1,0 +1,2 @@
+#!/bin/bash
+git pull git@github.com:MightyPirates/OpenComputers.git master-MC1.7.10
