@@ -30,13 +30,12 @@ object SaveHandler {
     scheduleSave(owner.world, owner.x, owner.z, nbt, name, data)
   }
 
+  def scheduleSave(owner: Owner, nbt: NBTTagCompound, name: String, save: NBTTagCompound => Unit) {
+    scheduleSave(owner, nbt, name, writeNBT(save))
+  }
+
   def scheduleSave(container: Container, nbt: NBTTagCompound, name: String, save: NBTTagCompound => Unit) {
-    val tmpNbt = new NBTTagCompound()
-    save(tmpNbt)
-    val baos = new ByteArrayOutputStream()
-    val dos = new DataOutputStream(baos)
-    CompressedStreamTools.write(tmpNbt, dos)
-    scheduleSave(container.world, math.round(container.xPosition - 0.5).toInt, math.round(container.zPosition - 0.5).toInt, nbt, name, baos.toByteArray)
+    scheduleSave(container.world, math.round(container.xPosition - 0.5).toInt, math.round(container.zPosition - 0.5).toInt, nbt, name, writeNBT(save))
   }
 
   def scheduleSave(world: World, x: Int, z: Int, nbt: NBTTagCompound, name: String, data: Array[Byte]) {
@@ -52,11 +51,27 @@ object SaveHandler {
     scheduleSave(dimension, chunk, name, data)
   }
 
+  def scheduleSave(world: World, x: Int, z: Int, nbt: NBTTagCompound, name: String, save: NBTTagCompound => Unit) {
+    scheduleSave(world, x, z, nbt, name, writeNBT(save))
+  }
+
+  private def writeNBT(save: NBTTagCompound => Unit) = {
+    val tmpNbt = new NBTTagCompound()
+    save(tmpNbt)
+    val baos = new ByteArrayOutputStream()
+    val dos = new DataOutputStream(baos)
+    CompressedStreamTools.write(tmpNbt, dos)
+    baos.toByteArray
+  }
+
   def loadNBT(nbt: NBTTagCompound, name: String): NBTTagCompound = {
     val data = load(nbt, name)
-    val bais = new ByteArrayInputStream(data)
-    val dis = new DataInputStream(bais)
-    CompressedStreamTools.read(dis)
+    if (data.length > 0) {
+      val bais = new ByteArrayInputStream(data)
+      val dis = new DataInputStream(bais)
+      CompressedStreamTools.read(dis)
+    }
+    else new NBTTagCompound()
   }
 
   def load(nbt: NBTTagCompound, name: String): Array[Byte] = {
@@ -101,6 +116,7 @@ object SaveHandler {
     val dimPath = new io.File(path, dimension.toString)
     val chunkPath = new io.File(dimPath, s"${chunk.chunkXPos}.${chunk.chunkZPos}")
     val file = new io.File(chunkPath, name)
+    if (!file.exists()) return Array.empty[Byte]
     try {
       // val bis = new io.BufferedInputStream(new GZIPInputStream(new io.FileInputStream(file)))
       val bis = new io.BufferedInputStream(new io.FileInputStream(file))
